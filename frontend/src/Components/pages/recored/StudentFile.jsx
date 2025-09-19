@@ -92,7 +92,7 @@ const StudentFile = () => {
     const newErrors = {};
     if (!selectedStudent.admission_no.trim())
       newErrors.admission_no = "Admission No is required";
-    if (!selectedStudent.name.trim()) newErrors.name = "First Name is required";
+    if (!selectedStudent.first_name.trim()) newErrors.first_name = "First Name is required";
     if (!selectedStudent.last_name.trim())
       newErrors.last_name = "Last Name is required";
     if (!selectedStudent.class_section.trim())
@@ -199,7 +199,7 @@ const StudentFile = () => {
 
   const filteredStudents = students.filter(
     (s) =>
-      (s.name && s.name.toLowerCase().includes(filter.toLowerCase())) ||
+      (s.first_name && s.first_name.toLowerCase().includes(filter.toLowerCase())) ||
       (s.username && s.username.toLowerCase().includes(filter.toLowerCase())) ||
       (s.email && s.email.toLowerCase().includes(filter.toLowerCase())) ||
       (s.admission_no && s.admission_no.toLowerCase().includes(filter.toLowerCase()))
@@ -251,7 +251,7 @@ const StudentFile = () => {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                     {[
                       { label: "Profile Photo", type: "file", key: "photo" },
-                      { label: "First Name", type: "text", key: "name" },
+                      { label: "First Name", type: "text", key: "first_name" },
                       { label: "Last Name", type: "text", key: "last_name" },
                       { label: "Admission No", type: "text", key: "admission_no" },
                       { label: "Username", type: "text", key: "username" },
@@ -397,7 +397,7 @@ const StudentFile = () => {
                 <TR>
                   <TH>Admission No</TH>
                   <TH>Username</TH>
-                  <TH>Name</TH>
+                  <TH>First Name</TH>
                   <TH>Last Name</TH>
                   <TH>Gender</TH>
                   <TH>Student ID</TH>
@@ -412,7 +412,7 @@ const StudentFile = () => {
                   <TR key={s.id}>
                     <TD>{s.admission_no}</TD>
                     <TD>{s.username || "-"}</TD>
-                    <TD>{s.name}</TD>
+                    <TD>{s.first_name}</TD>
                     <TD>{s.last_name || "-"}</TD>
                     <TD>{s.gender || "-"}</TD>
                     <TD>{s.student_id || "-"}</TD>

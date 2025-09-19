@@ -122,7 +122,7 @@ const roleMenus = {
 ],
 
 
-  department: [
+  department_head: [
   { label: 'Department Dashboard', to: '/dashboard', icon: <FaTachometerAlt /> },
   { label: 'Courses', to: '/department/courses', icon: <FaBook /> },
   { label: 'Faculty & Staff', to: '/department/faculty', icon: <FaChalkboardTeacher /> },
