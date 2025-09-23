@@ -21,7 +21,7 @@ import {
 } from "./stdformstyles";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
 
-const API_URL = "http://localhost:8000/api/students/";
+const API_URL = "https://eschooladmin.etbur.com/api/students/";
 
 const StudentFile = () => {
   const [students, setStudents] = useState([]);
