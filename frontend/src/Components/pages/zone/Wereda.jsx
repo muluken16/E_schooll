@@ -26,7 +26,7 @@ const SubcityWereda = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:8000/api/weredas/', {
+      const res = await fetch('https://eschooladmin.etbur.com/api/weredas/', {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`, // 🔑 send JWT
@@ -68,7 +68,7 @@ const SubcityWereda = () => {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch('http://localhost:8000/api/weredas/', {
+      const res = await fetch('https://eschooladmin.etbur.com/api/weredas/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
