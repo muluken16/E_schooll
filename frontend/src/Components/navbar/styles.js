@@ -13,6 +13,14 @@ export const NavBarContainer = styled.div`
   z-index: 1000;
 `;
 
+
+export const Timer = styled.span`
+  color: #fff;
+  font-weight: bold;
+  margin-right: 15px;
+`;
+
+
 export const Logo = styled.h1`
   font-size: 1.4rem;
 `;
