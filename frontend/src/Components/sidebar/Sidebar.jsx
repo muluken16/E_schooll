@@ -56,8 +56,8 @@ const roleMenus = {
   { label: 'Training & Capacity Building', to: '/zone/training', icon: <FaChalkboardTeacher /> },
   { label: 'Resource Allocation', to: '/zone/resources', icon: <FaBoxes /> },
   
-  { label: 'Examinations & Assessment', to: '/zone/exams', icon: <FaClipboardCheck /> },
-  { label: 'Community Engagement', to: '/zone/community', icon: <FaUsers /> },
+  //{ label: 'Examinations & Assessment', to: '/zone/exams', icon: <FaClipboardCheck /> },
+ 
   { label: 'Policy Updates', to: '/zone/policies', icon: <FaFileContract /> },
   
   { label: 'School Reports by Woreda', to: '/zone/wereda/reports', icon: <FaFileAlt /> },
