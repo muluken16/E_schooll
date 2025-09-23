@@ -5,7 +5,7 @@ import Layout from '../../layout/Layout';
 import { FaEllipsisV, FaEdit, FaTrash, FaToggleOn, FaToggleOff } from 'react-icons/fa';
 import './SchoolStaff.css';
 
-const API_URL = "http://127.0.0.1:8000/api/employees/";
+const API_URL = "https://eschooladmin.etbur.com/api/employees/";
 
 const SchoolStaff = () => {
   const token = localStorage.getItem('access_token'); // JWT token
