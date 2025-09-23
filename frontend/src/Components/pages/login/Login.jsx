@@ -23,7 +23,7 @@ const Login = () => {
     setError(''); // Reset error before login attempt
 
     try {
-      const res = await axios.post('http://localhost:8000/api/login/', {
+      const res = await axios.post('https://eschooladmin.etbur.com/api/login/', {
         email,
         password
       });
