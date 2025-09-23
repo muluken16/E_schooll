@@ -25,7 +25,7 @@ const ManagerSchool = () => {
   });
 
   const axiosInstance = axios.create({
-    baseURL: "http://localhost:8000/api/",
+    baseURL: "https://eschooladmin.etbur.com/api/",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
