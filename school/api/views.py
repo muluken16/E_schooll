@@ -9,10 +9,13 @@ from django.contrib.auth.hashers import check_password
 from django.db import transaction
 from django.http import HttpResponse
 import csv, io
-from datetime import datetime
+from rest_framework.permissions import AllowAny
 
-from .models import StaffProfile, StudentProfile
-from .serializers import StaffSerializer, StudentSerializer, UserSerializer
+from datetime import datetime
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+
+from .models import School, StaffProfile, StudentProfile, Wereda
+from .serializers import SchoolManagerRegistrationSerializer, SchoolSerializer, StaffSerializer, StudentSerializer, SupervisorRegistrationSerializer, UserSerializer, WeredaManagerSerializer, WeredaSerializer
 
 User = get_user_model()
 
@@ -21,33 +24,50 @@ User = get_user_model()
 # LOGIN API
 # -----------------------------
 class LoginAPIView(APIView):
+    """
+    User login API with detailed error responses.
+    Public endpoint: anyone can access to get JWT tokens.
+    """
+    permission_classes = [AllowAny]  # Allow anonymous access
+
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
 
-        if not email or not password:
-            return Response({"detail": "Email and password are required."}, status=400)
+        # 1️⃣ Validate input
+        if not email and not password:
+            return Response({"error": "Email and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+        elif not email:
+            return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+        elif not password:
+            return Response({"error": "Password is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 2️⃣ Check if user exists
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({"detail": "User with this email does not exist."}, status=404)
+            return Response({"error": "Email is incorrect."}, status=status.HTTP_404_NOT_FOUND)
 
+        # 3️⃣ Verify password
         if not check_password(password, user.password):
-            return Response({"detail": "Incorrect password."}, status=401)
+            return Response({"error": "Password is incorrect."}, status=status.HTTP_401_UNAUTHORIZED)
 
+        # 4️⃣ Check if user is active
         if not user.is_active:
-            return Response({"detail": "User account is disabled."}, status=403)
+            return Response({"error": "User account is disabled."}, status=status.HTTP_403_FORBIDDEN)
 
-        refresh = RefreshToken.for_user(user)
+        # 5️⃣ Generate JWT tokens
+        try:
+            refresh = RefreshToken.for_user(user)
+        except Exception as e:
+            return Response({"error": "Failed to generate token.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # 6️⃣ Return user data + tokens
         return Response({
             "user": UserSerializer(user).data,
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        })
-
-
-# -----------------------------
+            "access_token": str(refresh.access_token),
+            "refresh_token": str(refresh)
+        }, status=status.HTTP_200_OK)
 # USER DETAIL API
 # -----------------------------
 class UserDetailAPIView(APIView):
@@ -209,16 +229,46 @@ class StudentViewSet(viewsets.ModelViewSet):
 # -----------------------------
 # STAFF CRUD
 # -----------------------------
+from rest_framework import viewsets, status
+from rest_framework.response import Response
+from django.db import transaction
+from .models import StaffProfile, User
+from .serializers import StaffSerializer
+
+ROLE_CHOICES = [
+    ('vice_director', 'Vice Director'),
+    ('department_head', 'Department Head'),
+    ('teacher', 'Teacher'),
+    ('librarian', 'Librarian'),
+    ('record_officer', 'Record Officer'),
+    ('inventorian', 'Inventorian'),
+    ('store_man', 'Store Manager'),
+    ('dormitory_manager', 'Dormitory Manager'),
+]
+
 class StaffViewSet(viewsets.ModelViewSet):
-    queryset = StaffProfile.objects.all().order_by("-id")
+    """
+    ViewSet for StaffProfile with restricted roles.
+    Supports list, retrieve, create, update, delete.
+    """
     serializer_class = StaffSerializer
+
+    def get_queryset(self):
+        # Only show staff with roles in ROLE_CHOICES
+        allowed_roles = [role[0] for role in ROLE_CHOICES]
+        return StaffProfile.objects.filter(user__role__in=allowed_roles).order_by("-id")
 
     def create(self, request, *args, **kwargs):
         data = request.data
         required_fields = ["department", "role", "first_name", "last_name", "phone"]
         for field in required_fields:
             if not data.get(field):
-                return Response({"error": f"{field} is required"}, status=400)
+                return Response({"error": f"{field} is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Restrict role to ROLE_CHOICES
+        role = data.get("role")
+        if role not in [r[0] for r in ROLE_CHOICES]:
+            return Response({"error": f"Invalid role. Allowed roles: {[r[0] for r in ROLE_CHOICES]}"}, status=400)
 
         with transaction.atomic():
             # Auto-generate staff_id
@@ -243,7 +293,7 @@ class StaffViewSet(viewsets.ModelViewSet):
             user_fields = ["first_name", "last_name", "email", "profile_photo"]
             user_data = {k: data[k] for k in user_fields if k in data}
             user = User.objects.create(username=username, **user_data)
-            user.role = data.get("role")
+            user.role = role
             raw_password = (data.get("last_name") or "Staff").capitalize() + "#123"
             user.set_password(raw_password)
             user.save()
@@ -261,4 +311,96 @@ class StaffViewSet(viewsets.ModelViewSet):
             "password": raw_password,
             "staff_id": staff_id
         })
-        return Response(serializer_data, status=201)
+        return Response(serializer_data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        staff_instance = self.get_object()
+        data = request.data
+        role = data.get("role")
+        if role and role not in [r[0] for r in ROLE_CHOICES]:
+            return Response({"error": f"Invalid role. Allowed roles: {[r[0] for r in ROLE_CHOICES]}"}, status=400)
+
+        serializer = self.get_serializer(staff_instance, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class WeredaViewSet(viewsets.ModelViewSet):
+    queryset = Wereda.objects.all().order_by('id')
+    serializer_class = WeredaSerializer
+    # Automatically set the logged-in user when creating a new Wereda
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    # Optional: restrict updates/deletes to the creator only
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        # Uncomment the next line if you want users to only see their own entries
+        # queryset = queryset.filter(created_by=self.request.user)
+        return queryset
+    
+
+
+class WeredaManagerViewSet(viewsets.ModelViewSet):
+    queryset = StaffProfile.objects.filter(user__role="wereda_office").order_by("-id")
+    serializer_class = WeredaManagerSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            staff_profile = serializer.save()
+
+        return Response(self.get_serializer(staff_profile).data, status=status.HTTP_201_CREATED)
+    
+
+class SchoolViewSet(viewsets.ModelViewSet):
+    queryset = School.objects.all().order_by('-created_at')
+    serializer_class = SchoolSerializer
+    # permission_classes = [permissions.IsAuthenticated]  # require login
+
+class SchoolManagerRegistrationViewSet(viewsets.ModelViewSet):
+    # Fetch staff profiles where user role is 'school'
+    queryset = StaffProfile.objects.filter(user__role="school")
+    serializer_class = SchoolManagerRegistrationSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        staff_profile = serializer.save()
+        return Response(self.get_serializer(staff_profile).data, status=status.HTTP_201_CREATED)
+    
+
+class SupervisorRegistrationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet to manage Supervisors (role='senate')
+    Provides list, retrieve, create, update, and delete.
+    """
+    queryset = User.objects.filter(role='senate')
+    serializer_class = SupervisorRegistrationSerializer
+
+    # Override list to include schools
+    def list(self, request, *args, **kwargs):
+        supervisors = self.get_queryset()
+        serializer = self.get_serializer(supervisors, many=True)
+
+        # Fetch all schools
+        schools = School.objects.all().values('id', 'name')
+        return Response({
+            "supervisors": serializer.data,
+            "schools": list(schools)
+        }, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(self.get_serializer(user).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(self.get_serializer(user).data, status=status.HTTP_200_OK)

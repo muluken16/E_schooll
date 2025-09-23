@@ -1,0 +1,158 @@
+/* ManagerRegistration.css */
+.manager-reg-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.manager-reg-container h1 {
+    color: #2c3e50;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.manager-reg-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+}
+
+.manager-reg-form-section, .manager-reg-list-section {
+    flex: 1;
+    min-width: 300px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.manager-reg-form-section h2, .manager-reg-list-section h2 {
+    color: #34495e;
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.manager-reg-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.manager-reg-form-row {
+    display: flex;
+    gap: 15px;
+}
+
+.manager-reg-form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.manager-reg-form-group label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.manager-reg-form-group input,
+.manager-reg-form-group select {
+    padding: 12px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-size: 16px;
+    background-color: #fff;
+}
+
+.manager-reg-form-group input:focus,
+.manager-reg-form-group select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.manager-reg-submit-btn {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 0.3s;
+    margin-top: 10px;
+}
+
+.manager-reg-submit-btn:hover {
+    background-color: #219653;
+}
+
+.manager-reg-no-managers {
+    text-align: center;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.manager-reg-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.manager-reg-card {
+    padding: 20px;
+    border: 1px solid #ecf0f1;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+}
+
+.manager-reg-info h3 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+}
+
+.manager-reg-info p {
+    margin: 5px 0;
+    color: #34495e;
+}
+
+.manager-reg-alert {
+    padding: 12px 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.manager-reg-alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.manager-reg-alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.manager-reg-loading {
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+    color: #7f8c8d;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .manager-reg-content {
+        flex-direction: column;
+    }
+    
+    .manager-reg-form-row {
+        flex-direction: column;
+        gap: 20px;
+    }
+}

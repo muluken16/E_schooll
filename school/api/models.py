@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
+import datetime
+datetime.datetime.now()
 
 
 class User(AbstractUser):
@@ -124,7 +126,7 @@ class StaffProfile(models.Model):
     notes = models.TextField(blank=True, null=True)
     staff_id = models.CharField(max_length=20, unique=True, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)  # Phone number field
-
+    
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.get_status_display()})"
 
@@ -132,6 +134,103 @@ class StaffProfile(models.Model):
         ordering = ["user__last_name"]
         verbose_name = "Staff Profile"
         verbose_name_plural = "Staff Profiles"
+
+
+
+class Wereda(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+    ]
+
+    name = models.CharField(max_length=100)
+    population = models.PositiveIntegerField()
+    area = models.FloatField(help_text="Area in km²")
+    number_of_schools = models.PositiveIntegerField(default=0)
+    number_of_students = models.PositiveIntegerField(default=0)
+    number_of_teachers = models.PositiveIntegerField(default=0)
+    literacy_rate = models.FloatField(help_text="Literacy rate in %")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
+
+    # Track the user who added this Wereda
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="weredas"
+    )
+
+    # ✅ Assign a Wereda Office Manager
+    manager = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="managed_weredas",
+        limit_choices_to={'role': 'wereda_office'}  # <-- use this role
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class School(models.Model):
+    LEVEL_CHOICES = [
+        ('Primary', 'Primary'),
+        ('Secondary', 'Secondary'),
+        ('Preparatory', 'Preparatory'),
+        ('Combined', 'Combined'),
+    ]
+    
+    TYPE_CHOICES = [
+        ('Government', 'Government'),
+        ('Private', 'Private'),
+        ('NGO', 'NGO'),
+        ('Religious', 'Religious'),
+    ]
+    
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=20, unique=True)
+    wereda = models.ForeignKey(
+        'Wereda', 
+        on_delete=models.SET_NULL, 
+        null=True,  # optional
+        blank=True
+    )
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    student_count = models.PositiveIntegerField(default=0)
+    teacher_count = models.PositiveIntegerField(default=0)
+    address = models.TextField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    principal = models.CharField(max_length=100, blank=True)
+    established = models.PositiveIntegerField(blank=True, null=True)
+    manager = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL,
+        null=True,  # optional
+        blank=True,
+        limit_choices_to={'role': 'school'},
+        related_name='managed_schools'
+    )
+    supervisor = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL,
+        null=True,  # optional
+        blank=True,
+        limit_choices_to={'role': 'senate'},
+        related_name='supervise_schools'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+
+
 
 
 class Subject(models.Model):

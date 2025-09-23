@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
 from django.db import transaction
-from .models import StaffProfile, StudentProfile, User
+from .models import School, StaffProfile, StudentProfile, User, Wereda
+from django.contrib.auth.hashers import make_password
 
 User = get_user_model()
 
@@ -200,3 +201,339 @@ class StaffSerializer(serializers.ModelSerializer):
                 setattr(instance, attr, value)
         instance.save()
         return instance
+class WeredaSerializer(serializers.ModelSerializer):
+    # Display username of the creator instead of just ID
+    created_by_username = serializers.ReadOnlyField(source='created_by.username')
+
+    class Meta:
+        model = Wereda
+        fields = [
+            'id',
+            'name',
+            'population',
+            'area',
+            'number_of_schools',
+            'number_of_students',
+            'number_of_teachers',
+            'literacy_rate',
+            'status',
+            'created_by',          # user ID (optional, read-only if you prefer)
+            'created_by_username', # username of creator
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['created_by', 'created_at', 'updated_at']
+
+
+
+class WeredaManagerSerializer(serializers.ModelSerializer):
+    wereda = serializers.PrimaryKeyRelatedField(
+        queryset=Wereda.objects.all(),
+        write_only=True,
+        required=True
+    )
+    first_name = serializers.CharField(write_only=True, required=True)
+    last_name = serializers.CharField(write_only=True, required=True)
+    email = serializers.EmailField(write_only=True, required=True)
+
+    class Meta:
+        model = StaffProfile
+        fields = [
+            "id", "user", "staff_id", "department", "phone",
+            "status", "wereda", "first_name", "last_name", "email"
+        ]
+        read_only_fields = ["id", "user", "staff_id", "status"]
+
+    def create(self, validated_data):
+        wereda = validated_data.pop("wereda")
+        first_name = validated_data.pop("first_name")
+        last_name = validated_data.pop("last_name")
+        email = validated_data.pop("email")
+        phone = validated_data.get("phone", "")
+
+        # Generate staff_id
+        last_staff = StaffProfile.objects.order_by("-id").first()
+        number = 1
+        if last_staff and last_staff.staff_id and last_staff.staff_id[3:].isdigit():
+            number = int(last_staff.staff_id[3:]) + 1
+        staff_id = f"STF{str(number).zfill(4)}"
+
+        # Generate unique username
+        last5 = phone[-5:] if len(phone) >= 5 else str(number)
+        username = f"{first_name.lower()}{last5}"
+        counter = 1
+        base_username = username
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+
+        # Default password
+        raw_password = (last_name or "Manager").capitalize() + "#123"
+
+        with transaction.atomic():
+            # Create User
+            user = User.objects.create(
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                role="wereda_office",
+            )
+            user.set_password(raw_password)
+            user.save()
+
+            # Create StaffProfile
+            staff_profile = StaffProfile.objects.create(
+                user=user,
+                staff_id=staff_id,
+                department=validated_data.get("department", "Wereda Management"),
+                phone=phone,
+                status="active",
+            )
+
+            # Assign Wereda manager
+            wereda.manager = user
+            wereda.save()
+
+        return staff_profile
+
+    def to_representation(self, instance):
+        # Customize the output to include user info
+        return {
+            "id": instance.id,
+            "staff_id": instance.staff_id,
+            "department": instance.department,
+            "phone": instance.phone,
+            "status": instance.status,
+            "wereda": instance.user.managed_weredas.first().id if instance.user.managed_weredas.exists() else None,
+            "user": {
+                "first_name": instance.user.first_name,
+                "last_name": instance.user.last_name,
+                "email": instance.user.email,
+                "phone": instance.phone,
+            },
+            "created_at": instance.user.date_joined
+        }
+    
+from rest_framework import serializers
+from django.db import transaction
+from .models import User, StaffProfile, School
+
+class SchoolSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = School
+        fields = "__all__"
+
+
+
+class SchoolManagerRegistrationSerializer(serializers.ModelSerializer):
+    assigned_school_id = serializers.IntegerField(write_only=True)
+    phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    department = serializers.CharField(write_only=True, required=False, default="School Management")
+    hire_date = serializers.DateField(write_only=True, required=False, allow_null=True)
+    address = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "national_id",
+            "role",
+            "assigned_school_id",
+            "phone",
+            "department",
+            "hire_date",
+            "address",
+        ]
+        read_only_fields = ["id", "role"]
+
+    # --------------------------
+    # Username & Password helper
+    # --------------------------
+    def generate_username(self, first_name, last_name):
+        import random
+        random_number = random.randint(100, 999)
+        return f"{first_name[0].lower()}{last_name.lower()}{random_number}"
+
+    def generate_password(self, last_name):
+        last_three = last_name[-3:] if len(last_name) >= 3 else last_name
+        return f"{last_three}#123"
+
+    # --------------------------
+    # Create user + staff profile + assign school
+    # --------------------------
+    def create(self, validated_data):
+        school_id = validated_data.pop("assigned_school_id")
+        phone = validated_data.pop("phone", "")
+        department = validated_data.pop("department", "School Management")
+        hire_date = validated_data.pop("hire_date", None)
+        address = validated_data.pop("address", "")
+
+        first_name = validated_data.get("first_name")
+        last_name = validated_data.get("last_name")
+        username = self.generate_username(first_name, last_name)
+        raw_password = self.generate_password(last_name)
+
+        with transaction.atomic():
+            # 1️⃣ Create User
+            user = User.objects.create(
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+                email=validated_data.get("email"),
+                national_id=validated_data.get("national_id"),
+                role="school",
+            )
+            user.set_password(raw_password)
+            user.save()
+
+            # 2️⃣ Create StaffProfile
+            last_staff = StaffProfile.objects.order_by("-id").first()
+            number = 1
+            if last_staff and last_staff.staff_id and last_staff.staff_id[3:].isdigit():
+                number = int(last_staff.staff_id[3:]) + 1
+            staff_id = f"STF{str(number).zfill(4)}"
+
+            staff_profile = StaffProfile.objects.create(
+                user=user,
+                staff_id=staff_id,
+                department=department,
+                phone=phone,
+                status="active",
+                hire_date=hire_date,
+                address=address,
+            )
+
+            # 3️⃣ Assign as School Manager
+            try:
+                school = School.objects.get(id=school_id)
+                school.manager = user
+                school.save()
+            except School.DoesNotExist:
+                raise serializers.ValidationError(
+                    {"assigned_school_id": "Selected school does not exist"}
+                )
+
+        # Attach plain password for frontend/email if needed
+        user.plain_password = raw_password
+        return staff_profile
+
+    # --------------------------
+    # Representation for frontend
+    # --------------------------
+    def to_representation(self, instance):
+        user = instance.user
+        school = user.managed_schools.first() if hasattr(user, "managed_schools") and user.managed_schools.exists() else None
+
+        return {
+            "id": instance.id,
+            "staff_id": instance.staff_id,
+            "department": instance.department,
+            "phone": instance.phone,
+            "status": instance.status,
+            "hire_date": instance.hire_date,
+            "address": instance.address,
+            "school": {
+                "id": school.id,
+                "name": school.name,
+            } if school else None,
+            "user": {
+                "id": user.id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "email": user.email,
+                "username": user.username,
+                "national_id": user.national_id,
+                "role": user.role,
+            },
+            "created_at": user.date_joined,
+        }
+
+
+
+class SupervisorRegistrationSerializer(serializers.ModelSerializer):
+    # Accept multiple school IDs for assignment
+    assigned_school_ids = serializers.ListField(
+        child=serializers.IntegerField(), write_only=True
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'first_name',
+            'last_name',
+            'email',
+            'national_id',
+            'role',
+            'assigned_school_ids',
+        ]
+        read_only_fields = ['id', 'role']
+
+    # --------------------------
+    # Username & password helpers
+    # --------------------------
+    def generate_username(self, first_name, last_name):
+        import random
+        random_number = random.randint(100, 999)
+        return f"{first_name[0].lower()}{last_name.lower()}{random_number}"
+
+    def generate_password(self, last_name):
+        last_three = last_name[-3:] if len(last_name) >= 3 else last_name
+        return f"{last_three}#123"
+
+    # --------------------------
+    # Create supervisor user + assign schools
+    # --------------------------
+    def create(self, validated_data):
+        school_ids = validated_data.pop('assigned_school_ids', [])
+        validated_data['role'] = 'senate'  # force role to Supervisor
+
+        first_name = validated_data.get('first_name')
+        last_name = validated_data.get('last_name')
+
+        # Generate username and password
+        username = self.generate_username(first_name, last_name)
+        password = self.generate_password(last_name)
+        validated_data['username'] = username
+        validated_data['password'] = make_password(password)
+
+        # Create supervisor user
+        user = User.objects.create(**validated_data)
+
+        # Assign supervisor to multiple schools
+        schools = School.objects.filter(id__in=school_ids)
+        if not schools.exists():
+            raise serializers.ValidationError(
+                {'assigned_school_ids': 'No valid schools found'}
+            )
+
+        for school in schools:
+            school.supervisor = user
+            school.save()
+
+        # Attach plain password for frontend/email
+        user.plain_password = password
+        return user
+
+    # --------------------------
+    # Representation for frontend
+    # --------------------------
+    def to_representation(self, instance):
+        assigned_schools = School.objects.filter(supervisor=instance)
+        return {
+            "id": instance.id,
+            "first_name": instance.first_name,
+            "last_name": instance.last_name,
+            "email": instance.email,
+            "national_id": instance.national_id,
+            "role": instance.role,
+            "username": instance.username,
+            "assigned_schools": [
+                {"id": s.id, "name": s.name} for s in assigned_schools
+            ],
+            "created_at": instance.date_joined,
+        }

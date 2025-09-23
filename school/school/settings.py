@@ -123,17 +123,26 @@ AUTH_USER_MODEL = 'api.User'
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+from datetime import timedelta
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',  # Require login by default
+    ),
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),   # Access token valid for 30 minutes
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),      # Refresh token valid for 1 day
+    'ROTATE_REFRESH_TOKENS': False,                  # Do not rotate refresh tokens
+    'BLACKLIST_AFTER_ROTATION': True,                # Blacklist old refresh tokens if rotation is enabled
+    'AUTH_HEADER_TYPES': ('Bearer',),                # Authorization header type
 }
+
+
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',

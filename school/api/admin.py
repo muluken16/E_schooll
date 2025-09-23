@@ -51,3 +51,57 @@ class StudentAdmin(admin.ModelAdmin):
     list_display = ('user', 'student_id', 'program', 'level', 'current_semester', 'gpa')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'student_id', 'program')
     list_filter = ('program', 'level', 'current_semester')
+from django.contrib import admin
+from .models import Wereda
+
+@admin.register(Wereda)
+class WeredaAdmin(admin.ModelAdmin):
+    list_display = (
+        'name',
+        'manager',
+        'population',
+        'area',
+        'number_of_schools',
+        'number_of_students',
+        'number_of_teachers',
+        'literacy_rate',
+        'status',
+        'created_at',
+    )
+    list_filter = ('status', 'manager')
+    search_fields = ('name', 'manager__username', 'manager__first_name', 'manager__last_name')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'population', 'area', 'number_of_schools', 
+                       'number_of_students', 'number_of_teachers', 'literacy_rate', 'status', 'manager')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+
+    # schools/admin.py
+
+from django.contrib import admin
+from .models import School
+
+@admin.register(School)
+class SchoolAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "code",
+        "level",
+        "type",
+        "student_count",
+        "teacher_count",
+        "manager",
+        "supervisor",
+        "created_at",
+    )
+    list_filter = ("level", "type", "manager", "supervisor")
+    search_fields = ("name", "code", "manager__username", "supervisor__username")
+    readonly_fields = ("created_at", "updated_at")
+    ordering = ("name",)

@@ -8,7 +8,9 @@ import './SchoolStaff.css';
 const API_URL = "http://127.0.0.1:8000/api/employees/";
 
 const SchoolStaff = () => {
+  const token = localStorage.getItem('access_token'); // JWT token
   const user = JSON.parse(localStorage.getItem('user'));
+
   const [employees, setEmployees] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
@@ -16,6 +18,8 @@ const SchoolStaff = () => {
   const [filterDepartment, setFilterDepartment] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     first_name: '', last_name: '', email: '', phone: '', role: 'teacher',
@@ -26,19 +30,39 @@ const SchoolStaff = () => {
 
   const dropdownRefs = useRef({});
 
+  // Axios instance with token
+  const axiosInstance = axios.create({
+    baseURL: API_URL,
+    headers: {
+      Authorization: token ? `Bearer ${token}` : '',
+      'Content-Type': 'application/json',
+    },
+  });
+
+  // --------------------------
   // Fetch employees on mount
-  useEffect(() => { fetchEmployees(); }, []);
+  // --------------------------
+  useEffect(() => {
+    if (token) fetchEmployees();
+    else setLoading(false);
+  }, [token]);
 
   const fetchEmployees = async () => {
     try {
-      const res = await axios.get(API_URL);
+      setLoading(true);
+      const res = await axiosInstance.get('');
       setEmployees(res.data);
     } catch (err) {
       console.error("Error fetching employees", err);
-      alert("Failed to fetch employees.");
+      setErrorMessage("Failed to fetch employees.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  // --------------------------
+  // Form handlers
+  // --------------------------
   const handleInputChange = (e) => {
     const { name, value, files } = e.target;
     if (files) setFormData({ ...formData, [name]: files[0] });
@@ -60,7 +84,7 @@ const SchoolStaff = () => {
     if (!formData.phone.trim()) { alert("Phone number is required"); return false; }
     if (!formData.department.trim()) { alert("Department is required"); return false; }
     if (!formData.national_id.trim()) { alert("National ID is required"); return false; }
-    if (formData.role === 'teacher' && !formData.subject.trim()) { alert("Subject is required for teachers"); return false; }
+    if (formData.role==='teacher' && !formData.subject.trim()) { alert("Subject is required for teachers"); return false; }
     return true;
   };
 
@@ -70,15 +94,19 @@ const SchoolStaff = () => {
 
     try {
       const data = new FormData();
-      ['first_name','last_name','email','role','national_id'].forEach(k => { if(formData[k]) data.append(k, formData[k]); });
-      ['phone','department','subject','hire_date','salary','qualifications','status','address','emergency_contact','notes'].forEach(k => { if(formData[k]) data.append(k, formData[k]); });
-      if (formData.profile_photo) data.append('profile_photo', formData.profile_photo);
+      Object.keys(formData).forEach(k => {
+        if (formData[k]) data.append(k, formData[k]);
+      });
 
       if (editingEmployee) {
-        await axios.put(`${API_URL}${editingEmployee.id}/`, data, { headers:{'Content-Type':'multipart/form-data'} });
+        await axiosInstance.put(`${editingEmployee.id}/`, data, {
+          headers: {'Content-Type': 'multipart/form-data'}
+        });
         alert("Employee updated successfully!");
       } else {
-        await axios.post(API_URL, data, { headers:{'Content-Type':'multipart/form-data'} });
+        await axiosInstance.post('', data, {
+          headers: {'Content-Type': 'multipart/form-data'}
+        });
         alert("Employee added successfully!");
       }
 
@@ -88,10 +116,13 @@ const SchoolStaff = () => {
       resetForm();
     } catch (err) {
       console.error("Error saving employee", err.response?.data || err);
-      alert("Failed to save employee.");
+      setErrorMessage("Failed to save employee.");
     }
   };
 
+  // --------------------------
+  // Edit / Delete / Toggle Status
+  // --------------------------
   const editEmployee = (employee) => {
     const { user, ...profile } = employee;
     setFormData({
@@ -109,38 +140,44 @@ const SchoolStaff = () => {
   };
 
   const deleteEmployee = async (employee) => {
-    if (window.confirm(`Delete ${employee.user?.first_name || ''} ${employee.user?.last_name || ''}?`)) {
-      try { await axios.delete(`${API_URL}${employee.id}/`); fetchEmployees(); alert("Employee deleted successfully!"); }
-      catch(err){ console.error("Error deleting employee", err); alert("Failed to delete employee."); }
+    if (!window.confirm(`Delete ${employee.user?.first_name || ''} ${employee.user?.last_name || ''}?`)) return;
+    try {
+      await axiosInstance.delete(`${employee.id}/`);
+      fetchEmployees();
+      alert("Employee deleted successfully!");
+    } catch(err){
+      console.error("Error deleting employee", err);
+      setErrorMessage("Failed to delete employee.");
     }
   };
 
-  const toggleDropdown = (id) => {
-    setActiveDropdown(prev => prev === id ? null : id);
-  };
+  const toggleDropdown = (id) => setActiveDropdown(prev => prev===id ? null : id);
 
   const toggleStatus = async (emp) => {
-    const newStatus = emp.status === 'active' ? 'inactive' : 'active';
+    const newStatus = emp.status==='active' ? 'inactive' : 'active';
     try {
-      await axios.put(`${API_URL}${emp.id}/`, { ...emp, status: newStatus });
+      await axiosInstance.put(`${emp.id}/`, { ...emp, status: newStatus });
       fetchEmployees();
       alert(`Employee is now ${newStatus}`);
     } catch(err) {
       console.error(err);
-      alert('Failed to change status');
+      setErrorMessage('Failed to change status');
     }
   };
 
-  const filteredEmployees = employees.filter(employee => {
-    const fullName = `${employee.user?.first_name || ''} ${employee.user?.last_name || ''}`.toLowerCase();
+  // --------------------------
+  // Filtered employees
+  // --------------------------
+  const filteredEmployees = employees.filter(emp => {
+    const fullName = `${emp.user?.first_name || ''} ${emp.user?.last_name || ''}`.toLowerCase();
     const matchesSearch =
       fullName.includes(searchTerm.toLowerCase()) ||
-      (employee.user?.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (employee.subject || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (employee.department || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = filterDepartment==='all' || (employee.department||'')===filterDepartment;
-    const matchesStatus = filterStatus==='all' || (employee.status||'')===filterStatus;
-    return matchesSearch && matchesDepartment && matchesStatus;
+      (emp.user?.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (emp.subject || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (emp.department || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDept = filterDepartment==='all' || (emp.department||'')===filterDepartment;
+    const matchesStatus = filterStatus==='all' || (emp.status||'')===filterStatus;
+    return matchesSearch && matchesDept && matchesStatus;
   });
 
   const departments = ['all', ...new Set(employees.map(e => e.department || ''))];
@@ -156,34 +193,33 @@ const SchoolStaff = () => {
 
   const getProfilePhoto = (photo) => photo ? photo : '/default-avatar.png';
 
+  if (loading) return <Layout><div>Loading...</div></Layout>;
+
   return (
     <Layout>
       <div className="school-staff-container">
-
-        {/* Header */}
         <div className="page-header">
           <h1>School Staff Management</h1>
-          <p className="welcome-message">Welcome, Director {user?.name}</p>
+          <p className="welcome-message">Welcome, {user?.name}</p>
         </div>
 
-        {/* Dashboard Cards */}
-        <div className="dashboard-cards">
-          <div className="stat-card"><h3>Total Staff</h3><p>{employees.length}</p></div>
-          <div className="stat-card"><h3>Teachers</h3><p>{employees.filter(e=>e.role==='teacher').length}</p></div>
-          <div className="stat-card"><h3>Admin Staff</h3><p>{employees.filter(e=>e.role!=='teacher').length}</p></div>
-          <div className="stat-card"><h3>Active Staff</h3><p>{employees.filter(e=>e.status==='active').length}</p></div>
-        </div>
+        {errorMessage && <div className="error">{errorMessage}</div>}
 
         {/* Filters & Add */}
         <div className="controls-section">
           <div className="filters">
-            <div className="filter-group"><label>Search:</label><input type="text" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} /></div>
-            <div className="filter-group"><label>Department:</label>
+            <div className="filter-group">
+              <label>Search:</label>
+              <input type="text" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/>
+            </div>
+            <div className="filter-group">
+              <label>Department:</label>
               <select value={filterDepartment} onChange={e=>setFilterDepartment(e.target.value)}>
                 {departments.map((dept,i)=><option key={i} value={dept}>{dept||'Unassigned'}</option>)}
               </select>
             </div>
-            <div className="filter-group"><label>Status:</label>
+            <div className="filter-group">
+              <label>Status:</label>
               <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
                 <option value="all">All</option>
                 <option value="active">Active</option>
@@ -196,14 +232,12 @@ const SchoolStaff = () => {
         </div>
 
         {/* Add/Edit Form */}
-        {/* Add/Edit Form */}
-       {showAddForm && (
+        {showAddForm && (
           <div className="modal-overlay">
             <div className="modal-content">
-              <h2>{editingEmployee?'Edit Employee':'Add New Employee'}</h2>
+              <h2>{editingEmployee ? 'Edit Employee':'Add New Employee'}</h2>
               <form onSubmit={handleSubmit}>
-
-                {/* Name */}
+                {/* Name, Email, Phone, etc. */}
                 <div className="form-row">
                   <div className="form-group">
                     <label>First Name *</label>
@@ -214,8 +248,6 @@ const SchoolStaff = () => {
                     <input type="text" name="last_name" value={formData.last_name} onChange={handleInputChange} required/>
                   </div>
                 </div>
-
-                {/* Email / Phone / National ID */}
                 <div className="form-row">
                   <div className="form-group">
                     <label>Email</label>
@@ -230,7 +262,6 @@ const SchoolStaff = () => {
                     <input type="text" name="national_id" value={formData.national_id} onChange={handleInputChange} required/>
                   </div>
                 </div>
-
                 {/* Role / Status */}
                 <div className="form-row">
                   <div className="form-group">
@@ -270,19 +301,7 @@ const SchoolStaff = () => {
                   )}
                 </div>
 
-                {/* Hire Date / Salary */}
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Hire Date</label>
-                    <input type="date" name="hire_date" value={formData.hire_date} onChange={handleInputChange}/>
-                  </div>
-                  <div className="form-group">
-                    <label>Salary ($)</label>
-                    <input type="number" name="salary" value={formData.salary} onChange={handleInputChange}/>
-                  </div>
-                </div>
-
-                {/* Other Fields */}
+                {/* Other fields */}
                 <div className="form-group">
                   <label>Qualifications</label>
                   <input type="text" name="qualifications" value={formData.qualifications} onChange={handleInputChange}/>
@@ -304,7 +323,6 @@ const SchoolStaff = () => {
                   <input type="file" name="profile_photo" accept="image/*" onChange={handleInputChange}/>
                 </div>
 
-                {/* Actions */}
                 <div className="form-actions">
                   <button type="submit" className="btn btn-primary">{editingEmployee?'Update Employee':'Add Employee'}</button>
                   <button type="button" className="btn btn-secondary" onClick={()=>{setShowAddForm(false); setEditingEmployee(null);}}>Cancel</button>
@@ -313,7 +331,6 @@ const SchoolStaff = () => {
             </div>
           </div>
         )}
-
 
         {/* Employees Grid */}
         <div className="employees-table-container">
@@ -333,15 +350,11 @@ const SchoolStaff = () => {
                       <FaEllipsisV />
                       {activeDropdown===emp.id && (
                         <div className="dropdown-menu">
-                          <button className="dropdown-item" onClick={()=>editEmployee(emp)}>
-                            <FaEdit style={{ marginRight: '6px' }}/> Edit
-                          </button>
-                          <button className="dropdown-item" onClick={()=>deleteEmployee(emp)}>
-                            <FaTrash style={{ marginRight: '6px' }}/> Delete
-                          </button>
+                          <button className="dropdown-item" onClick={()=>editEmployee(emp)}><FaEdit style={{marginRight:'6px'}}/> Edit</button>
+                          <button className="dropdown-item" onClick={()=>deleteEmployee(emp)}><FaTrash style={{marginRight:'6px'}}/> Delete</button>
                           <button className="dropdown-item" onClick={()=>toggleStatus(emp)}>
-                            {emp.status==='active'? <FaToggleOff style={{ marginRight:'6px' }}/> : <FaToggleOn style={{ marginRight:'6px' }}/>}
-                            {emp.status==='active' ? 'Deactivate' : 'Activate'}
+                            {emp.status==='active'?<FaToggleOff style={{marginRight:'6px'}}/>:<FaToggleOn style={{marginRight:'6px'}}/>}
+                            {emp.status==='active'?'Deactivate':'Activate'}
                           </button>
                         </div>
                       )}
@@ -362,7 +375,6 @@ const SchoolStaff = () => {
             </div>
           )}
         </div>
-
       </div>
     </Layout>
   );
