@@ -64,6 +64,7 @@ const roleMenus = {
   { label: 'Student Records Oversight', to: '/zone/students/records', icon: <FaBookReader /> },
   { label: 'Teacher & Staff Oversight', to: '/zone/staff/manage', icon: <FaUserTie /> },
   { label: 'Zone Reports', to: '/zone/reports', icon: <FaFileAlt /> },
+  { label: 'Evaluation', to: '/zone/wereda/evaluation', icon: <FaFileAlt /> },
   { label: 'Alerts & Notifications', to: '/zone/alerts', icon: <FaBell /> },
 ],
 wereda_office: [
@@ -281,18 +282,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               <span className="label">Settings</span>
             </Link>
           </NavItem>
-          <NavItem>
-            <button onClick={handleLogout} className="logout-btn">
-              <span className="icon"><FaSignOutAlt /></span>
-              <span className="label">Logout</span>
-            </button>
-          </NavItem>
+        
           <NavItem>
             <button onClick={handleLogout} className="logout-btn">
             </button>
           </NavItem>
           <NavItem>
-            <button onClick={handleLogout} className="logout-btn">
+            <button onClick={handleLogout} className="logout- btn">
             </button>
           </NavItem>
         </SidebarFooter>

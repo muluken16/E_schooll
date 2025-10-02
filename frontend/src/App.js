@@ -21,6 +21,9 @@ import StudentRecordOversite from './Components/pages/zone/StudentRecordOversite
 import TeacherStaffOversite from './Components/pages/zone/TeacherStaffOversite';
 import Policy from './Components/pages/zone/Policy';
 import WeredaReport from './Components/pages/zone/WeredaReport';
+import ZoneEvaluation from './Components/pages/zone/ZoneEvaluation';
+ 
+
 
 
 import Schools from './Components/pages/wereda/Schools'; 
@@ -36,6 +39,9 @@ import TimeTable from './Components/pages/viceDirector/TimeTable';
 
 import { setToken } from './Components/utils/auth';
 import React from 'react';
+
+
+import Settings from "./Components/pages/Settings"
 
 function App() {
      const handleLogout = () => {
@@ -75,6 +81,9 @@ function App() {
         <Route path="/zone/staff/manage" element={<TeacherStaffOversite />} />
         <Route path="/zone/policies" element={<Policy />} />
         <Route path="/zone/wereda/reports" element={<WeredaReport />} />
+        <Route path="/zone/wereda/evaluation" element={<ZoneEvaluation />} />
+
+        
 
         <Route path="/wereda/schools" element={<Schools />} /> 
         <Route path="/wereda/schools/directors" element={<ADS />} /> 
@@ -88,6 +97,7 @@ function App() {
 
         <Route path="/zone/wereda/manage" element={<WeredaManage />} /> 
         {/* ... other role routes ... */}
+        <Route path ="/settings" element={<Settings />} />
       </Routes>
     </Router>
   );

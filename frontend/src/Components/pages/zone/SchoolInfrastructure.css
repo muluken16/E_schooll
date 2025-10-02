@@ -1,0 +1,461 @@
+.school-infrastructure {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    background: #f8fafc;
+    min-height: 100vh;
+}
+
+/* Header Styles */
+.infrastructure-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    color: white;
+}
+
+.infrastructure-header h1 {
+    margin-bottom: 10px;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.infrastructure-header p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+/* Controls Section */
+.controls-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.search-container {
+    position: relative;
+    flex: 1;
+    min-width: 300px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 15px 20px 15px 50px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: #64748b;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 12px 20px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.filter-btn:hover, .filter-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+/* Main Statistics */
+.main-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.main-stat-card {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: transform 0.3s ease;
+}
+
+.main-stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+}
+
+.stat-info h3 {
+    color: #64748b;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #1e293b;
+}
+
+/* Table Sections */
+.table-section {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+    overflow: hidden;
+}
+
+.table-section h2 {
+    padding: 25px 25px 0;
+    margin: 0;
+    color: #1e293b;
+    font-size: 1.5rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.section-header h2 {
+    padding: 0;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.schools-count {
+    background: #667eea;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s ease;
+}
+
+.close-btn:hover {
+    background: #dc2626;
+}
+
+/* Table Containers */
+.table-container {
+    overflow-x: auto;
+}
+
+.summary-table, .detailed-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.summary-table th, .detailed-table th {
+    background: #f8fafc;
+    padding: 20px;
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-table td, .detailed-table td {
+    padding: 20px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #475569;
+}
+
+.summary-table tr:hover, .detailed-table tr:hover {
+    background-color: #f8fafc;
+}
+
+.summary-table tr.selected-row {
+    background-color: #f0f4ff;
+    border-left: 4px solid #667eea;
+}
+
+/* Sortable Headers */
+.sortable {
+    cursor: pointer;
+    transition: background 0.3s ease;
+    user-select: none;
+}
+
+.sortable:hover {
+    background: #e2e8f0 !important;
+}
+
+/* Specific Cell Styles */
+.wereda-name {
+    font-size: 1.1rem;
+    color: #1e293b;
+}
+
+.school-name {
+    min-width: 200px;
+}
+
+.school-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.school-id {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.students-count {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 1.1rem;
+}
+
+.labs-info {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.labs-count {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.labs-label {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.library-indicator {
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.library-indicator.available {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.library-indicator.unavailable {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    min-width: 120px;
+    text-align: center;
+}
+
+/* Buttons */
+.view-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+    background: #5a6fd8;
+    transform: translateY(-1px);
+}
+
+.view-btn.active {
+    background: #ef4444;
+}
+
+.view-btn.active:hover {
+    background: #dc2626;
+}
+
+.location-btn {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.location-btn:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+/* Legend Section */
+.legend-section {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.legend-section h4 {
+    margin: 0 0 20px 0;
+    color: #1e293b;
+    font-size: 1.1rem;
+}
+
+.legend-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .controls-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-container {
+        min-width: auto;
+    }
+    
+    .main-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .school-infrastructure {
+        padding: 10px;
+    }
+    
+    .infrastructure-header {
+        padding: 20px;
+    }
+    
+    .infrastructure-header h1 {
+        font-size: 2rem;
+    }
+    
+    .main-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .legend-items {
+        grid-template-columns: 1fr;
+    }
+    
+    .summary-table th, .detailed-table th,
+    .summary-table td, .detailed-table td {
+        padding: 15px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .infrastructure-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .filter-buttons {
+        justify-content: center;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        min-width: 120px;
+        text-align: center;
+    }
+}

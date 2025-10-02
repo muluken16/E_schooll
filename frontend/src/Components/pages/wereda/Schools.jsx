@@ -37,7 +37,7 @@ const Schools = () => {
 
   const token = localStorage.getItem('access_token');
   const axiosInstance = axios.create({
-    baseURL: 'https://eschooladmin.etbur.com/api/',
+    baseURL: 'http://127.0.0.1:8000/api/',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',

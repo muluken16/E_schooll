@@ -24,9 +24,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-3tbr$=ng12^vi!f8=eu96fr*8(=va#6nn1(-d4!_dx-zp)h5!6'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ["eschooladmin.etbur.com", "localhost","127.0.0.1"]
+DEBUG = False
+ALLOWED_HOSTS = ["eschooladmin.etbur.com"]
 
 
 # Application definition
@@ -123,6 +122,16 @@ AUTH_USER_MODEL = 'api.User'
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+CSRF_COOKIE_SAMESITE = "None"
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+CSRF_TRUSTED_ORIGINS = [
+    "https://eschooladmin.etbur.com"
+]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 from datetime import timedelta
 
 REST_FRAMEWORK = {
@@ -138,17 +147,24 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),   # Access token valid for 30 minutes
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),      # Refresh token valid for 1 day
     'ROTATE_REFRESH_TOKENS': False,                  # Do not rotate refresh tokens
-    'BLACKLIST_AFTER_ROTATION': True,                # Blacklist old refresh tokens if rotation is enabled
+    'BLACKLIST_AFTER_ROTATION': False,                # Blacklist old refresh tokens if rotation is enabled
     'AUTH_HEADER_TYPES': ('Bearer',),                # Authorization header type
 }
 
 
-
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
+    "https://eschool-orpin.vercel.app",
+    "http://localhost:3000",
 ]
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://eschooladmin.etbur.com",
+    "https://eschool-orpin.vercel.app",
+]
+
 
 from corsheaders.defaults import default_headers
 
@@ -164,6 +180,10 @@ CORS_ALLOW_METHODS = [
     'DELETE',
     'OPTIONS',
 ]
-
+# CORS_ALLOWED_ORIGINS = [
+#     'http://localhost:3000',
+# ]
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
