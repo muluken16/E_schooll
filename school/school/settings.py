@@ -123,6 +123,10 @@ AUTH_USER_MODEL = 'api.User'
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Media files (uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 from datetime import timedelta
 
 REST_FRAMEWORK = {

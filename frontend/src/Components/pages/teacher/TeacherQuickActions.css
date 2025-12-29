@@ -1,0 +1,364 @@
+/* Teacher Quick Actions Styles */
+.teacher-quick-actions {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+/* Header */
+.quick-actions-header {
+  margin-bottom: 1.5rem;
+}
+
+.quick-actions-header h2,
+.quick-actions-header h3 {
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #1f2937;
+}
+
+.quick-actions-header h2 {
+  font-size: 1.5rem;
+}
+
+.quick-actions-header h3 {
+  font-size: 1.25rem;
+}
+
+.quick-actions-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+/* Grid Layouts */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.quick-actions-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+/* Action Cards */
+.quick-action-card {
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+  border-color: var(--action-color);
+}
+
+.quick-action-card:hover .action-icon {
+  background: var(--action-color);
+  color: white;
+  transform: scale(1.1);
+}
+
+.quick-action-card.compact {
+  padding: 1rem;
+  text-align: center;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Action Icons */
+.action-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  color: var(--action-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.quick-action-card.compact .action-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+}
+
+.action-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 2px solid white;
+}
+
+/* Action Content */
+.action-content h4 {
+  margin: 0 0 0.5rem 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.action-content p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.action-title-compact {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  text-align: center;
+}
+
+/* Sidebar Variant */
+.teacher-quick-actions.sidebar {
+  padding: 1rem;
+  max-width: 280px;
+}
+
+.quick-actions-list {
+  margin-bottom: 1.5rem;
+}
+
+.quick-action-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  margin-bottom: 0.5rem;
+}
+
+.quick-action-item:hover {
+  background: #f3f4f6;
+}
+
+.action-icon-small {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.action-details {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.action-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.action-badge-small {
+  background: #ef4444;
+  color: white;
+  border-radius: 12px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Export Section */
+.export-section {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.export-section h3 {
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+  font-size: 1.1rem;
+}
+
+.export-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.export-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  color: var(--export-color);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-action-button:hover {
+  border-color: var(--export-color);
+  background: var(--export-color);
+  color: white;
+}
+
+/* Sidebar Export Actions */
+.export-actions h4 {
+  margin: 0 0 0.75rem 0;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.export-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  margin-bottom: 0.25rem;
+}
+
+.export-button:hover {
+  background: #f3f4f6;
+}
+
+/* Quick Stats */
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.stat-item svg {
+  color: #6b7280;
+  font-size: 1.25rem;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .quick-actions-grid.compact {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .export-actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .quick-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .teacher-quick-actions.sidebar {
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .teacher-quick-actions {
+    padding: 1rem;
+  }
+  
+  .quick-action-card {
+    padding: 1rem;
+  }
+  
+  .action-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+  
+  .quick-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-item {
+    padding: 0.75rem;
+  }
+}

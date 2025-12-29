@@ -40,6 +40,17 @@ import TimeTable from './Components/pages/viceDirector/TimeTable';
 import { setToken } from './Components/utils/auth';
 import React from 'react';
 
+import StudentProfile from './Components/pages/student/StudentProfile';
+import StudentGrades from './Components/pages/student/StudentGrades';
+import StudentAttendance from './Components/pages/student/StudentAttendance';
+import StudentReports from './Components/pages/student/StudentReports';
+import StudentLibrary from './Components/pages/student/StudentLibrary';
+import StudentCourses from './Components/pages/student/StudentCourses';
+import TeacherMain from './Components/pages/teacher/TeacherMain';
+import TeacherTest from './Components/pages/teacher/TeacherTest';
+import TestPage from './Components/pages/TestPage';
+import StudentLoginTest from './Components/pages/StudentLoginTest';
+
 
 import Settings from "./Components/pages/Settings"
 
@@ -93,6 +104,22 @@ function App() {
         <Route path ="/director/academics" element = {<AcademicsOversite />} />
         <Route path ="/vice/discipline" element = {<DesciplineActivity />} />
         <Route path ="/vice/timetable" element ={<TimeTable />} />
+
+        {/* Student Routes */}
+        <Route path="/student/profile" element={<StudentProfile />} />
+        <Route path="/student/grades" element={<StudentGrades />} />
+        <Route path="/student/attendance" element={<StudentAttendance />} />
+        <Route path="/student/reports" element={<StudentReports />} />
+        <Route path="/student/library" element={<StudentLibrary />} />
+        <Route path="/student/courses" element={<StudentCourses />} />
+        
+        {/* Teacher Routes */}
+        <Route path="/teacher/*" element={<TeacherMain />} />
+        
+        {/* Test Pages */}
+        <Route path="/test" element={<TestPage />} />
+        <Route path="/teacher-test" element={<TeacherTest />} />
+        <Route path="/login-test" element={<StudentLoginTest />} />
 
 
         <Route path="/zone/wereda/manage" element={<WeredaManage />} /> 

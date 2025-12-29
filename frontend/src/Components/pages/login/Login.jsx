@@ -23,7 +23,12 @@ const Login = () => {
     setError(''); // Reset error before login attempt
 
     try {
-      const res = await axios.post('https://eschooladmin.etbur.com/api/login/', {
+      // Use local development URL
+      const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "http://127.0.0.1:8000/api/login/"
+        : "https://eschooladmin.etbur.com/api/login/";
+
+      const res = await axios.post(API_URL, {
         email,
         password
       });
@@ -35,8 +40,16 @@ const Login = () => {
       localStorage.setItem('refresh_token', refresh_token);
       localStorage.setItem('user', JSON.stringify(user));
 
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect based on user role
+      if (user.role === 'student') {
+        navigate('/dashboard');
+      } else if (user.role === 'teacher') {
+        navigate('/teacher/dashboard');
+      } else if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard'); // Default fallback
+      }
     } catch (err) {
       console.error('Login error:', err);
 

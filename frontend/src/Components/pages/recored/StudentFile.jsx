@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import Layout from "../../layout/Layout";
+import { getToken } from "../../utils/auth";
 import {
   PageContainer,
   SectionContainer,
   SubTitle,
   Input,
+  Select,
   Button,
   TableContainer,
   Table,
@@ -18,14 +20,28 @@ import {
   ModalBackground,
   ModalContent,
   CloseButton,
+  StatsGrid,
+  StatCard,
+  StatusBadge,
+  Avatar,
+  FilterBar,
+  SectionDivider
 } from "./stdformstyles";
-import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import { FaEye, FaEdit, FaTrash, FaUserGraduate, FaUserCheck, FaUserTimes, FaRestroom, FaFileCsv, FaPlus, FaPrint, FaFilter, FaSearch, FaIdCard } from "react-icons/fa";
 
-const API_URL = "https://eschooladmin.etbur.com/api/students/";
+const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  ? "http://localhost:8000/api/students/"
+  : "https://eschooladmin.etbur.com/api/students/";
 
 const StudentFile = () => {
   const [students, setStudents] = useState([]);
-  const [filter, setFilter] = useState("");
+
+  // Advanced Filters
+  const [search, setSearch] = useState("");
+  const [filterClass, setFilterClass] = useState("");
+  const [filterGender, setFilterGender] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState(""); // view | edit | add
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -34,8 +50,19 @@ const StudentFile = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null); // Fix: use null initially
 
-   const initialStudent = {
+  // Academic Record State
+  const [academicData, setAcademicData] = useState(null);
+  const [loadingAcademic, setLoadingAcademic] = useState(false);
+
+  // Stats
+  const totalStudents = students.length;
+  const activeStudents = students.filter(s => (s.academic_status || "Active") === "Active").length;
+  const maleStudents = students.filter(s => (s.gender || "").toLowerCase() === "male").length;
+  const femaleStudents = students.filter(s => (s.gender || "").toLowerCase() === "female").length;
+
+  const initialStudent = {
     admission_no: "",
     first_name: "",
     last_name: "",
@@ -63,18 +90,34 @@ const StudentFile = () => {
     photo: null,
   };
 
-  const [selectedStudent, setSelectedStudent] = useState(initialStudent);
-
-
   // Fetch students
   const fetchStudents = async () => {
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(API_URL, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
       const data = await res.json();
       setStudents(data.results || data);
     } catch (err) {
       console.error("Error fetching students:", err);
     }
+  };
+
+  // Fetch academic record
+  const fetchAcademicRecord = async (studentId) => {
+    setLoadingAcademic(true);
+    try {
+      const res = await fetch(`${API_URL}${studentId}/academic_record/`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAcademicData(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setLoadingAcademic(false);
   };
 
   useEffect(() => {
@@ -87,37 +130,38 @@ const StudentFile = () => {
     return () => clearTimeout(timer);
   }, [successMessage]);
 
-  // Validation
+
   const validateForm = () => {
     const newErrors = {};
-    if (!selectedStudent.admission_no.trim())
-      newErrors.admission_no = "Admission No is required";
+    if (!selectedStudent.admission_no.trim()) newErrors.admission_no = "Admission No is required";
     if (!selectedStudent.first_name.trim()) newErrors.first_name = "First Name is required";
-    if (!selectedStudent.last_name.trim())
-      newErrors.last_name = "Last Name is required";
-    if (!selectedStudent.class_section.trim())
-      newErrors.class_section = "Class / Section is required";
+    if (!selectedStudent.last_name.trim()) newErrors.last_name = "Last Name is required";
+    if (!selectedStudent.class_section.trim()) newErrors.class_section = "Class / Section is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Add/Edit Student
   const handleAddOrEditStudent = async () => {
     if (!validateForm()) return;
     setIsLoading(true);
     try {
       const method = modalType === "edit" ? "PUT" : "POST";
-      const url =
-        modalType === "edit" ? `${API_URL}${selectedStudent.id}/` : API_URL;
+      const url = modalType === "edit" ? `${API_URL}${selectedStudent.id}/` : API_URL;
 
       const formData = new FormData();
       for (let key in selectedStudent) {
         if (selectedStudent[key] !== null) {
+          // If photo is string (url from backend), don't send it again unless changed
+          if (key === "photo" && typeof selectedStudent[key] === "string") continue;
           formData.append(key, selectedStudent[key]);
         }
       }
 
-      const res = await fetch(url, { method, body: formData });
+      const res = await fetch(url, {
+        method,
+        body: formData,
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -126,20 +170,14 @@ const StudentFile = () => {
         return;
       }
 
-      setSuccessMessage(
-        modalType === "edit"
-          ? "Student updated successfully!"
-          : "Student added successfully!"
-      );
-      if (data.password && modalType === "add")
-        setGeneratedPassword(data.password);
+      setSuccessMessage(modalType === "edit" ? "Student updated successfully!" : "Student added successfully!");
+      if (data.password && modalType === "add") setGeneratedPassword(data.password);
 
       setIsModalOpen(false);
       setSelectedStudent(initialStudent);
       fetchStudents();
     } catch (err) {
       setErrors({ form: "Failed to save student" });
-      console.error(err);
     }
     setIsLoading(false);
   };
@@ -147,7 +185,10 @@ const StudentFile = () => {
   const handleDeleteStudent = async (id) => {
     if (!window.confirm("Are you sure you want to delete this student?")) return;
     try {
-      const res = await fetch(`${API_URL}${id}/`, { method: "DELETE" });
+      const res = await fetch(`${API_URL}${id}/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
       if (res.ok) {
         setSuccessMessage("Student deleted successfully!");
         fetchStudents();
@@ -164,7 +205,11 @@ const StudentFile = () => {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch(`${API_URL}import_csv/`, { method: "POST", body: formData });
+      const res = await fetch(`${API_URL}import_csv/`, {
+        method: "POST",
+        body: formData,
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
       const data = await res.json();
       if (res.ok) {
         setSuccessMessage(data.message || "CSV imported successfully!");
@@ -181,7 +226,9 @@ const StudentFile = () => {
 
   const handleExport = async () => {
     try {
-      const res = await fetch(`${API_URL}export_csv/`);
+      const res = await fetch(`${API_URL}export_csv/`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
       if (!res.ok) throw new Error("Failed to export CSV");
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -197,58 +244,230 @@ const StudentFile = () => {
     }
   };
 
-  const filteredStudents = students.filter(
-    (s) =>
-      (s.first_name && s.first_name.toLowerCase().includes(filter.toLowerCase())) ||
-      (s.username && s.username.toLowerCase().includes(filter.toLowerCase())) ||
-      (s.email && s.email.toLowerCase().includes(filter.toLowerCase())) ||
-      (s.admission_no && s.admission_no.toLowerCase().includes(filter.toLowerCase()))
-  );
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // Filter Logic
+  const filteredStudents = students.filter((s) => {
+    const matchesSearch =
+      (s.first_name && s.first_name.toLowerCase().includes(search.toLowerCase())) ||
+      (s.username && s.username.toLowerCase().includes(search.toLowerCase())) ||
+      (s.admission_no && s.admission_no.toLowerCase().includes(search.toLowerCase()));
+
+    const matchesClass = filterClass ? s.class_section === filterClass : true;
+    const matchesGender = filterGender ? (s.gender || "").toLowerCase() === filterGender.toLowerCase() : true;
+    const matchesStatus = filterStatus ? (s.academic_status || "Active") === filterStatus : true;
+
+    return matchesSearch && matchesClass && matchesGender && matchesStatus;
+  });
+
+  // Extract unique classes for filter dropdown
+  const uniqueClasses = [...new Set(students.map(s => s.class_section).filter(Boolean))].sort();
 
   const indexOfLast = currentPage * rowsPerPage;
   const indexOfFirst = indexOfLast - rowsPerPage;
   const currentStudents = filteredStudents.slice(indexOfFirst, indexOfLast);
 
-  const handleRowsChange = (e) => {
-    setRowsPerPage(parseInt(e.target.value));
-    setCurrentPage(1);
-  };
-
   const openModal = (type, student = initialStudent) => {
     setModalType(type);
     setSelectedStudent(student);
     setIsModalOpen(true);
+    setAcademicData(null);
+    if (type === 'view' && student.id) {
+      fetchAcademicRecord(student.id);
+    }
   };
 
   return (
     <Layout>
       <PageContainer>
-        <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "20px" }}>Student Management</h1>
+        <StatsGrid>
+          <StatCard color="#3182ce">
+            <div className="content">
+              <h3>Total Students</h3>
+              <div className="value">{totalStudents}</div>
+            </div>
+            <div className="icon"><FaUserGraduate /></div>
+          </StatCard>
+          <StatCard color="#38a169">
+            <div className="content">
+              <h3>Active Students</h3>
+              <div className="value">{activeStudents}</div>
+            </div>
+            <div className="icon"><FaUserCheck /></div>
+          </StatCard>
+          <StatCard color="#e53e3e">
+            <div className="content">
+              <h3>Inactive</h3>
+              <div className="value">{totalStudents - activeStudents}</div>
+            </div>
+            <div className="icon"><FaUserTimes /></div>
+          </StatCard>
+          <StatCard color="#805ad5">
+            <div className="content">
+              <h3>Male / Female</h3>
+              <div className="value">{maleStudents} / {femaleStudents}</div>
+            </div>
+            <div className="icon"><FaRestroom /></div>
+          </StatCard>
+        </StatsGrid>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+          <div>
+            <h1 style={{ fontSize: "24px", fontWeight: "bold", color: "#2d3748" }}>Student Management</h1>
+            <p style={{ color: "#718096", fontSize: "14px" }}>Manage, track, and report student data</p>
+          </div>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <Button onClick={() => openModal("add")} bgColor="#3182ce" hoverColor="#2c5282">
+              <FaPlus /> New Student
+            </Button>
+            <Button onClick={handlePrint} bgColor="#718096" hoverColor="#4a5568">
+              <FaPrint /> Print List
+            </Button>
+          </div>
+        </div>
 
         {successMessage && <SuccessMessage>{successMessage}</SuccessMessage>}
         {generatedPassword && modalType === "add" && (
-          <SuccessMessage>
-            Generated Password: <strong>{generatedPassword}</strong>
-          </SuccessMessage>
+          <SuccessMessage>Generated Password: <strong>{generatedPassword}</strong></SuccessMessage>
         )}
-        {errors.form && <ErrorText>{JSON.stringify(errors.form)}</ErrorText>}
 
-        <Button onClick={() => openModal("add")}>Register New Student</Button>
+        {/* Filters */}
+        <SectionContainer>
+          <FilterBar>
+            <div style={{ flex: 2, minWidth: "200px" }}>
+              <div style={{ position: "relative" }}>
+                <FaSearch style={{ position: "absolute", left: "12px", top: "14px", color: "#a0aec0" }} />
+                <Input
+                  placeholder="Search by Name, ID, or Admission No..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{ paddingLeft: "35px" }}
+                />
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: "150px" }}>
+              <Select value={filterClass} onChange={(e) => setFilterClass(e.target.value)}>
+                <option value="">All Classes</option>
+                {uniqueClasses.map(c => <option key={c} value={c}>{c}</option>)}
+              </Select>
+            </div>
+            <div style={{ flex: 1, minWidth: "150px" }}>
+              <Select value={filterGender} onChange={(e) => setFilterGender(e.target.value)}>
+                <option value="">All Genders</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </Select>
+            </div>
+            <div style={{ flex: 1, minWidth: "150px" }}>
+              <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                <option value="">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Graduated">Graduated</option>
+              </Select>
+            </div>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <FileInputLabel title="Import CSV" bgColor="#2f855a" hoverColor="#276749">
+                <FaFileCsv size={18} /> Import
+                <input type="file" accept=".csv" onChange={handleImport} disabled={isLoading} />
+              </FileInputLabel>
+              <Button onClick={handleExport} disabled={students.length === 0} bgColor="#2b6cb0" hoverColor="#2c5282" title="Export CSV">
+                <FaFileCsv size={18} /> Export
+              </Button>
+            </div>
+          </FilterBar>
+
+          {errors.import && <ErrorText>{errors.import}</ErrorText>}
+          {isLoading && <p style={{ color: "#3182ce", fontWeight: "600" }}>Processing...</p>}
+
+          <TableContainer>
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Student</TH>
+                  <TH>Admission No</TH>
+                  <TH>Gender</TH>
+                  <TH>Class</TH>
+                  <TH>Department</TH>
+                  <TH>Status</TH>
+                  <TH>Actions</TH>
+                </TR>
+              </THead>
+              <tbody>
+                {currentStudents.length > 0 ? currentStudents.map((s) => (
+                  <TR key={s.id}>
+                    <TD>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <Avatar>
+                          {s.photo ? (
+                            <img src={s.photo} alt={s.first_name} />
+                          ) : (
+                            <span>{s.first_name?.[0]}{s.last_name?.[0]}</span>
+                          )}
+                        </Avatar>
+                        <div>
+                          <div style={{ fontWeight: "bold" }}>{s.first_name} {s.last_name}</div>
+                          <div style={{ fontSize: "12px", color: "#718096" }}>{s.username}</div>
+                        </div>
+                      </div>
+                    </TD>
+                    <TD style={{ fontWeight: "600", color: "#4a5568" }}>{s.admission_no}</TD>
+                    <TD>{s.gender || "-"}</TD>
+                    <TD><span style={{ fontWeight: "bold" }}>{s.class_section}</span></TD>
+                    <TD>{s.department || "-"}</TD>
+                    <TD><StatusBadge status={s.academic_status || "Active"}>{s.academic_status || "Active"}</StatusBadge></TD>
+                    <TD>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <Button onClick={() => openModal("view", s)} bgColor="#edf2f7" hoverColor="#e2e8f0" style={{ color: "#2d3748", padding: "8px" }} title="View Details"><FaEye /></Button>
+                        <Button onClick={() => openModal("edit", s)} bgColor="#edf2f7" hoverColor="#e2e8f0" style={{ color: "#d69e2e", padding: "8px" }} title="Edit"><FaEdit /></Button>
+                        <Button onClick={() => handleDeleteStudent(s.id)} bgColor="#edf2f7" hoverColor="#e2e8f0" style={{ color: "#e53e3e", padding: "8px" }} title="Delete"><FaTrash /></Button>
+                      </div>
+                    </TD>
+                  </TR>
+                )) : (
+                  <TR>
+                    <TD colSpan="7" style={{ textAlign: "center", padding: "30px", color: "#a0aec0" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                        <FaUserGraduate size={40} style={{ opacity: 0.2 }} />
+                        <p>No students found matching your filters.</p>
+                      </div>
+                    </TD>
+                  </TR>
+                )}
+              </tbody>
+            </Table>
+          </TableContainer>
+
+          <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", color: "#718096", fontSize: "14px" }}>
+            <div>Showing {currentStudents.length} of {filteredStudents.length} students</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span>Rows per page:</span>
+              <Select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }} style={{ width: "70px", padding: "5px" }}>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </Select>
+            </div>
+          </div>
+        </SectionContainer>
 
         {/* Modal */}
-        {isModalOpen && (
+        {isModalOpen && selectedStudent && (
           <ModalBackground>
             <ModalContent>
               <CloseButton onClick={() => setIsModalOpen(false)}>×</CloseButton>
-              <h2 style={{ marginBottom: "15px" }}>
-                {modalType === "view" ? "View Student" : modalType === "edit" ? "Edit Student" : "Add Student"}
+              <h2 style={{ marginBottom: "25px", fontSize: "24px", color: "#2d3748", borderBottom: "1px solid #e2e8f0", paddingBottom: "15px" }}>
+                {modalType === "view" ? "Student Details" : modalType === "edit" ? "Edit Student" : "Register New Student"}
               </h2>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "25px" }}>
                 {/* Personal Info */}
-                <SectionContainer>
+                <div>
                   <SubTitle>Personal Information</SubTitle>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
                     {[
                       { label: "Profile Photo", type: "file", key: "photo" },
                       { label: "First Name", type: "text", key: "first_name" },
@@ -257,25 +476,29 @@ const StudentFile = () => {
                       { label: "Username", type: "text", key: "username" },
                       { label: "Email", type: "email", key: "email" },
                       { label: "Phone", type: "text", key: "phone" },
-                      { label: "Gender", type: "select", key: "gender", options: ["Male", "Female", "Other"] },
+                      { label: "Gender", type: "select", key: "gender", options: ["Male", "Female"] },
                       { label: "Date of Birth", type: "date", key: "dob" },
-                      { label: "Blood Group", type: "select", key: "blood_group", options: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] },
+                      { label: "Blood Group", type: "select", key: "blood_group", options: ["A+", "A-", "B+", "B-", "O+", "O-"] },
                       { label: "Address", type: "textarea", key: "address" },
-                      { label: "National ID", type: "text", key: "national_id" },
                     ].map(field => (
-                      <div key={field.key} style={{ flex: "1 1 200px", display: "flex", flexDirection: "column" }}>
-                        <label style={{ fontWeight: "bold" }}>{field.label}</label>
+                      <div key={field.key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <label style={{ fontWeight: "600", fontSize: "13px", color: "#4a5568" }}>{field.label}</label>
                         {modalType === "view" ? (
-                          <span>{selectedStudent[field.key] || "-"}</span>
+                          <div style={{ padding: "10px", background: "#f7fafc", borderRadius: "8px", border: "1px solid #edf2f7" }}>{selectedStudent[field.key] || "N/A"}</div>
                         ) : field.type === "file" ? (
                           <Input type="file" onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.files[0] })} />
                         ) : field.type === "select" ? (
-                          <select value={selectedStudent[field.key]} onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })}>
+                          <Select value={selectedStudent[field.key]} onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })}>
                             <option value="">Select {field.label}</option>
                             {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                          </select>
+                          </Select>
                         ) : field.type === "textarea" ? (
-                          <textarea rows={2} value={selectedStudent[field.key]} onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })} />
+                          <textarea
+                            rows={2}
+                            value={selectedStudent[field.key]}
+                            onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })}
+                            style={{ border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px", fontFamily: "inherit" }}
+                          />
                         ) : (
                           <Input type={field.type} value={selectedStudent[field.key]} onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })} />
                         )}
@@ -283,165 +506,112 @@ const StudentFile = () => {
                       </div>
                     ))}
                   </div>
-                </SectionContainer>
+                </div>
+
+
+                <div style={{ margin: "20px 0", height: "1px", background: "#e2e8f0" }}></div>
 
                 {/* Academic Info */}
-                <SectionContainer>
+                <div>
                   <SubTitle>Academic Information</SubTitle>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
                     {[
-                      { label: "Class / Section", key: "class_section" },
-                      { label: "Student ID", key: "student_id" },
-                      { label: "Department", key: "department" },
-                      { label: "Year", key: "year" },
+                      { label: "Class / Section", key: "class_section", type: "text" },
+                      { label: "Student ID", key: "student_id", type: "text" },
+                      { label: "Department", key: "department", type: "text" },
                       { label: "Enrollment Date", key: "enrollment_date", type: "date" },
-                      { label: "Academic Status", key: "academic_status", type: "select", options: ["Active", "Inactive", "Graduated"] },
+                      { label: "Status", key: "academic_status", type: "select", options: ["Active", "Inactive", "Graduated"] },
                     ].map(field => (
-                      <div key={field.key} style={{ flex: "1 1 200px", display: "flex", flexDirection: "column" }}>
-                        <label style={{ fontWeight: "bold" }}>{field.label}</label>
+                      <div key={field.key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <label style={{ fontWeight: "600", fontSize: "13px", color: "#4a5568" }}>{field.label}</label>
                         {modalType === "view" ? (
-                          <span>{selectedStudent[field.key] || "-"}</span>
+                          <div style={{ padding: "10px", background: "#f7fafc", borderRadius: "8px", border: "1px solid #edf2f7" }}>{selectedStudent[field.key] || "N/A"}</div>
                         ) : field.type === "select" ? (
-                          <select value={selectedStudent[field.key]} onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })}>
+                          <Select value={selectedStudent[field.key]} onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })}>
                             {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                          </select>
-                        ) : field.type === "date" ? (
-                          <Input type="date" value={selectedStudent[field.key]} onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })} />
+                          </Select>
                         ) : (
-                          <Input value={selectedStudent[field.key]} onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })} />
+                          <Input type={field.type} value={selectedStudent[field.key]} onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })} />
                         )}
                       </div>
                     ))}
                   </div>
-                </SectionContainer>
+                </div>
 
-                {/* Guardian Info */}
-                <SectionContainer>
-                  <SubTitle>Guardian Information</SubTitle>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                    {[
-                      { label: "Father Name", key: "father_name" },
-                      { label: "Mother Name", key: "mother_name" },
-                      { label: "Guardian Contact", key: "guardian_contact" },
-                      { label: "Guardian Email", key: "guardian_email" },
-                      { label: "Relation", key: "guardian_relation" },
-                    ].map(field => (
-                      <div key={field.key} style={{ flex: "1 1 200px", display: "flex", flexDirection: "column" }}>
-                        <label style={{ fontWeight: "bold" }}>{field.label}</label>
-                        {modalType === "view" ? <span>{selectedStudent[field.key] || "-"}</span> : <Input value={selectedStudent[field.key]} onChange={e => setSelectedStudent({ ...selectedStudent, [field.key]: e.target.value })} />}
-                      </div>
-                    ))}
-                  </div>
-                </SectionContainer>
+                {/* Academic Record / Score Section (View Only) */}
+                {modalType === 'view' && (
+                  <>
+                    <div style={{ margin: "20px 0", height: "1px", background: "#e2e8f0" }}></div>
+                    <div>
+                      <SubTitle>Academic Performance & Activities</SubTitle>
+                      {loadingAcademic ? <p>Loading academic records...</p> : academicData ? (
+                        <div>
+                          <h4 style={{ marginBottom: '10px', color: '#4a5568' }}>Grades</h4>
+                          {academicData.grades && academicData.grades.length > 0 ? (
+                            <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                                <thead>
+                                  <tr style={{ background: '#f1f5f9', textAlign: 'left' }}>
+                                    <th style={{ padding: '8px', border: '1px solid #e2e8f0' }}>Subject</th>
+                                    <th style={{ padding: '8px', border: '1px solid #e2e8f0' }}>Type</th>
+                                    <th style={{ padding: '8px', border: '1px solid #e2e8f0' }}>Score</th>
+                                    <th style={{ padding: '8px', border: '1px solid #e2e8f0' }}>Semester</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {academicData.grades.map(g => (
+                                    <tr key={g.id}>
+                                      <td style={{ padding: '8px', border: '1px solid #e2e8f0' }}>{g.subject_name || '-'}</td>
+                                      <td style={{ padding: '8px', border: '1px solid #e2e8f0' }}>{g.grade_type}</td>
+                                      <td style={{ padding: '8px', border: '1px solid #e2e8f0', fontWeight: 'bold' }}>{g.score} / {g.full_mark}</td>
+                                      <td style={{ padding: '8px', border: '1px solid #e2e8f0' }}>{g.semester_name}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <p style={{ color: '#718096', fontStyle: 'italic', marginBottom: '15px' }}>No grades recorded.</p>
+                          )}
 
-                {/* Other Info */}
-                <SectionContainer>
-                  <SubTitle>Other Details</SubTitle>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                    {["medical_condition", "extra_activities", "remarks"].map(field => (
-                      <div key={field} style={{ flex: "1 1 300px", display: "flex", flexDirection: "column" }}>
-                        <label style={{ fontWeight: "bold" }}>{field.replace("_", " ").toUpperCase()}</label>
-                        {modalType === "view" ? <span>{selectedStudent[field] || "-"}</span> : <textarea value={selectedStudent[field]} onChange={e => setSelectedStudent({ ...selectedStudent, [field]: e.target.value })} rows={2} />}
-                      </div>
-                    ))}
-                  </div>
-                </SectionContainer>
+                          <h4 style={{ marginBottom: '10px', color: '#4a5568' }}>Extra Activities & Remarks</h4>
+                          <div style={{ display: 'grid', gap: '15px', gridTemplateColumns: '1fr 1fr' }}>
+                            <div style={{ padding: '12px', background: '#fffaf0', borderRadius: '8px', border: '1px solid #fbd38d' }}>
+                              <strong>Extra Activities:</strong>
+                              <p style={{ marginTop: '5px' }}>{academicData.extra_activities || "None reported."}</p>
+                            </div>
+                            <div style={{ padding: '12px', background: '#ebf8ff', borderRadius: '8px', border: '1px solid #bee3f8' }}>
+                              <strong>Remarks:</strong>
+                              <p style={{ marginTop: '5px' }}>{academicData.remarks || "No remarks."}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p>No academic data available.</p>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 {modalType !== "view" && (
-                  <Button
-                    onClick={handleAddOrEditStudent}
-                    bgColor="#38a169"
-                    hoverColor="#2f855a"
-                    style={{ marginTop: "25px", width: "100%" }}
-                    disabled={isLoading}
-                  >
-                    {isLoading
-                      ? "Saving..."
-                      : modalType === "edit"
-                      ? "Update Student"
-                      : "Register Student"}
-                  </Button>
+                  <div style={{ marginTop: "20px" }}>
+                    <Button
+                      onClick={handleAddOrEditStudent}
+                      bgColor="#38a169"
+                      hoverColor="#2f855a"
+                      style={{ width: "100%", padding: "15px", fontSize: "16px" }}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Saving..." : modalType === "edit" ? "Update Student" : "Register Student"}
+                    </Button>
+                  </div>
                 )}
               </div>
             </ModalContent>
           </ModalBackground>
         )}
-
-        {/* Manage Students Table */}
-        <SectionContainer>
-          <SubTitle>Manage Students</SubTitle>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "10px", alignItems: "center" }}>
-            <Input placeholder="Search..." value={filter} onChange={(e) => setFilter(e.target.value)} style={{ flex: 1 }} />
-            <FileInputLabel>
-              Import CSV
-              <input type="file" accept=".csv" onChange={handleImport} disabled={isLoading} />
-            </FileInputLabel>
-            <Button onClick={handleExport} disabled={students.length === 0} bgColor="#38a169" hoverColor="#2f855a">
-              Export CSV
-            </Button>
-            <div>
-              Rows:
-              <select value={rowsPerPage} onChange={handleRowsChange} style={{ marginLeft: "5px", padding: "3px" }}>
-                {[10, 25, 50, 100].map(num => <option key={num} value={num}>{num}</option>)}
-              </select>
-            </div>
-          </div>
-          {errors.import && <ErrorText>{errors.import}</ErrorText>}
-          {isLoading && <p style={{ color: "#3182ce" }}>Processing...</p>}
-        </SectionContainer>
-
-        <div style={{ overflowX: "auto" }}>
-          <TableContainer>
-            <Table>
-              <THead>
-                <TR>
-                  <TH>Admission No</TH>
-                  <TH>Username</TH>
-                  <TH>First Name</TH>
-                  <TH>Last Name</TH>
-                  <TH>Gender</TH>
-                  <TH>Student ID</TH>
-                  <TH>Phone</TH>
-                  <TH>Email</TH>
-                  <TH>Class / Section</TH>
-                  <TH>Actions</TH>
-                </TR>
-              </THead>
-              <tbody>
-                {currentStudents.length > 0 ? currentStudents.map((s) => (
-                  <TR key={s.id}>
-                    <TD>{s.admission_no}</TD>
-                    <TD>{s.username || "-"}</TD>
-                    <TD>{s.first_name}</TD>
-                    <TD>{s.last_name || "-"}</TD>
-                    <TD>{s.gender || "-"}</TD>
-                    <TD>{s.student_id || "-"}</TD>
-                    <TD>{s.phone || "-"}</TD>
-                    <TD>{s.email || "-"}</TD>
-                    <TD>{s.class_section}</TD>
-                    <TD style={{ display: "flex", gap: "6px" }}>
-                      <Button onClick={() => openModal("view", s)} bgColor="#3182ce" hoverColor="#2b6cb0" style={{ padding: "5px" }} title="View"><FaEye /></Button>
-                      <Button onClick={() => openModal("edit", s)} bgColor="#ed8936" hoverColor="#dd6b20" style={{ padding: "5px" }} title="Edit"><FaEdit /></Button>
-                      <Button onClick={() => handleDeleteStudent(s.id)} bgColor="#f56565" hoverColor="#c53030" style={{ padding: "5px" }} title="Delete"><FaTrash /></Button>
-                    </TD>
-                  </TR>
-                )) : (
-                  <TR>
-                    <TD colSpan="10" style={{ textAlign: "center", padding: "10px", color: "#718096" }}>
-                      {filter ? "No students match your search criteria" : "No students found"}
-                    </TD>
-                  </TR>
-                )}
-              </tbody>
-            </Table>
-          </TableContainer>
-        </div>
-
-        <p style={{ marginTop: "10px", color: "#4a5568" }}>
-          Showing {currentStudents.length} of {filteredStudents.length} filtered students
-        </p>
       </PageContainer>
-    </Layout>
+    </Layout >
   );
 };
 

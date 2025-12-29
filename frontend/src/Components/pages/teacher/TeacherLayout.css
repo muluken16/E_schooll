@@ -1,0 +1,47 @@
+/* Teacher Layout Styles */
+.teacher-layout {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.teacher-content {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
+/* Override any default layout padding for teacher pages */
+.teacher-layout .main-content {
+  padding: 0;
+}
+
+/* Ensure teacher pages have consistent styling */
+.teacher-layout .page-container {
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+/* Loading states */
+.teacher-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  color: #6b7280;
+  font-size: 1.125rem;
+}
+
+.teacher-error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  color: #ef4444;
+  font-size: 1.125rem;
+  background: #fef2f2;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  margin: 20px;
+  padding: 20px;
+  text-align: center;
+}

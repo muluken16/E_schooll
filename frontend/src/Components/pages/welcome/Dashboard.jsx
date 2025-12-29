@@ -1,9 +1,15 @@
 import React from 'react';
 import Layout from '../../layout/Layout';
+import StudentDashboard from '../student/StudentDashboard';
 import './Dashboard.css'; // We'll create this CSS file
 
 const Dashboard = () => {
     const user = JSON.parse(localStorage.getItem('user'));
+
+    // If user is a student, show the student dashboard
+    if (user?.role === 'student') {
+        return <StudentDashboard />;
+    }
 
     // Function to display role-specific information with card layout
     const renderRoleSpecificContent = () => {

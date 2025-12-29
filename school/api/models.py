@@ -844,3 +844,60 @@ class Question(models.Model):
 
     def __str__(self):
         return self.question_text
+
+class Announcement(models.Model):
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+    
+    TYPE_CHOICES = [
+        ('general', 'General'),
+        ('exam', 'Examination'),
+        ('fee', 'Fee'),
+        ('event', 'Event'),
+        ('health', 'Health & Safety'),
+        ('academic', 'Academic'),
+    ]
+    
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='general')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    target_audience = models.CharField(max_length=50, default='all')  # 'all', 'students', 'teachers', etc.
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return self.title
+
+class AnnouncementRead(models.Model):
+    announcement = models.ForeignKey(Announcement, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    read_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['announcement', 'user']
+        
+    def __str__(self):
+        return f"{self.user.username} read {self.announcement.title}"
+
+class LibraryRecord(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
+    book_title = models.CharField(max_length=200)
+    book_author = models.CharField(max_length=100)
+    book_isbn = models.CharField(max_length=20)
+    borrow_date = models.DateField()
+    expected_return_date = models.DateField()
+    actual_return_date = models.DateField(null=True, blank=True)
+    returned = models.BooleanField(default=False)
+    overdue = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"{self.student.username} - {self.book_title}"

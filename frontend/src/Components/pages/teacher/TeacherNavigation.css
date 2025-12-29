@@ -1,0 +1,354 @@
+/* Teacher Navigation Styles */
+.teacher-navigation {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+/* Navigation Header */
+.nav-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 30px 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.nav-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.nav-icon {
+  font-size: 2.5rem;
+  color: #3b82f6;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav-title h2 {
+  color: #1f2937;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+  background: linear-gradient(135deg, #1f2937, #374151);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav-subtitle {
+  color: #6b7280;
+  font-size: 1.125rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Navigation Grid */
+.nav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.nav-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.nav-card:hover::before {
+  transform: scaleX(1);
+}
+
+.nav-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.15);
+  border-color: #3b82f6;
+}
+
+.nav-card.active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(59, 130, 246, 0.2);
+}
+
+.nav-card.active::before {
+  transform: scaleX(1);
+}
+
+.nav-card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.nav-card:hover .nav-card-icon {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.nav-card-content {
+  flex: 1;
+}
+
+.nav-card-content h3 {
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+  transition: color 0.3s ease;
+}
+
+.nav-card.active .nav-card-content h3 {
+  color: #1d4ed8;
+}
+
+.nav-card-content p {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.nav-card-arrow {
+  font-size: 1.5rem;
+  color: #d1d5db;
+  transition: all 0.3s ease;
+  font-weight: bold;
+}
+
+.nav-card:hover .nav-card-arrow {
+  color: #3b82f6;
+  transform: translateX(4px);
+}
+
+.nav-card.active .nav-card-arrow {
+  color: #1d4ed8;
+}
+
+/* Navigation Footer */
+.nav-footer {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.quick-stats h4 {
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+.quick-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.quick-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #374151;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.quick-link:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
+}
+
+.quick-link svg {
+  font-size: 1.125rem;
+  color: #6b7280;
+  transition: color 0.3s ease;
+}
+
+.quick-link:hover svg {
+  color: #3b82f6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .teacher-navigation {
+    padding: 16px;
+  }
+  
+  .nav-header {
+    padding: 20px 16px;
+    margin-bottom: 30px;
+  }
+  
+  .nav-title {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .nav-icon {
+    font-size: 2rem;
+  }
+  
+  .nav-title h2 {
+    font-size: 2rem;
+  }
+  
+  .nav-subtitle {
+    font-size: 1rem;
+  }
+  
+  .nav-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .nav-card {
+    padding: 20px;
+    gap: 16px;
+  }
+  
+  .nav-card-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.25rem;
+  }
+  
+  .nav-card-content h3 {
+    font-size: 1.125rem;
+  }
+  
+  .nav-footer {
+    padding: 20px;
+  }
+  
+  .quick-links {
+    grid-template-columns: 1fr;
+  }
+  
+  .quick-link {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-header {
+    padding: 16px 12px;
+  }
+  
+  .nav-title h2 {
+    font-size: 1.75rem;
+  }
+  
+  .nav-card {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .nav-card-icon {
+    width: 45px;
+    height: 45px;
+    font-size: 1.125rem;
+  }
+  
+  .nav-card-content h3 {
+    font-size: 1rem;
+  }
+  
+  .nav-card-content p {
+    font-size: 0.8125rem;
+  }
+  
+  .nav-footer {
+    padding: 16px;
+  }
+  
+  .quick-stats h4 {
+    font-size: 1.125rem;
+  }
+  
+  .quick-link {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  
+  .quick-link span {
+    font-size: 0.875rem;
+  }
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nav-card {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+.nav-card:nth-child(1) { animation-delay: 0.1s; }
+.nav-card:nth-child(2) { animation-delay: 0.2s; }
+.nav-card:nth-child(3) { animation-delay: 0.3s; }
+.nav-card:nth-child(4) { animation-delay: 0.4s; }
+.nav-card:nth-child(5) { animation-delay: 0.5s; }
+.nav-card:nth-child(6) { animation-delay: 0.6s; }

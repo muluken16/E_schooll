@@ -1,23 +1,57 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission, AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework import status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
-from django.db import transaction
+from django.db import transaction, models
 from django.http import HttpResponse
-import csv, io
-from rest_framework.permissions import AllowAny
-
 from datetime import datetime
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+import csv
+import io
 
-from .models import School, StaffProfile, StudentProfile, Wereda
-from .serializers import SchoolManagerRegistrationSerializer, SchoolSerializer, StaffSerializer, StudentSerializer, SupervisorRegistrationSerializer, UserSerializer, WeredaManagerSerializer, WeredaSerializer
+from .models import (
+    School, StaffProfile, StudentProfile, Wereda, Grade, Attendance, 
+    Subject, Semester, BorrowRecord, Book, Teacher, Section, Schedule, 
+    Announcement, AnnouncementRead
+)
+from .serializers import (
+    SchoolManagerRegistrationSerializer, SchoolSerializer, StaffSerializer, 
+    StudentSerializer, SupervisorRegistrationSerializer, UserSerializer, 
+    WeredaManagerSerializer, WeredaSerializer, TeacherSerializer, 
+    TeacherGradeSerializer, TeacherAttendanceSerializer
+)
+from .record_serializers import GradeSerializer, AttendanceSerializer
 
 User = get_user_model()
+
+
+# Custom Permission Classes
+class IsStudentOwner(BasePermission):
+    """Students can only access their own data"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated
+    
+    def has_object_permission(self, request, view, obj):
+        if request.user.role == 'student':
+            if hasattr(obj, 'user'):
+                return obj.user == request.user
+            elif hasattr(obj, 'student'):
+                return obj.student == request.user
+        return True
+
+
+class IsStudentOrReadOnly(BasePermission):
+    """Students can only read their own data"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated
+    
+    def has_object_permission(self, request, view, obj):
+        if request.user.role == 'student':
+            return request.method in ['GET', 'HEAD', 'OPTIONS']
+        return True
 
 
 # -----------------------------
@@ -42,27 +76,25 @@ class LoginAPIView(APIView):
         elif not password:
             return Response({"error": "Password is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 2️⃣ Check if user exists
+        # 2️⃣ Check if user exists and verify password
         try:
             user = User.objects.get(email=email)
+            if not check_password(password, user.password):
+                return Response({"error": "Invalid email or password."}, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:
-            return Response({"error": "Email is incorrect."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Invalid email or password."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # 3️⃣ Verify password
-        if not check_password(password, user.password):
-            return Response({"error": "Password is incorrect."}, status=status.HTTP_401_UNAUTHORIZED)
-
-        # 4️⃣ Check if user is active
+        # 3️⃣ Check if user is active
         if not user.is_active:
             return Response({"error": "User account is disabled."}, status=status.HTTP_403_FORBIDDEN)
 
-        # 5️⃣ Generate JWT tokens
+        # 4️⃣ Generate JWT tokens
         try:
             refresh = RefreshToken.for_user(user)
         except Exception as e:
             return Response({"error": "Failed to generate token.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # 6️⃣ Return user data + tokens
+        # 5️⃣ Return user data + tokens
         return Response({
             "user": UserSerializer(user).data,
             "access_token": str(refresh.access_token),
@@ -80,8 +112,15 @@ class UserDetailAPIView(APIView):
 # -----------------------------
 # STUDENT CRUD
 class StudentViewSet(viewsets.ModelViewSet):
-    queryset = StudentProfile.objects.all().order_by("-id")
+    queryset = StudentProfile.objects.select_related('user').order_by("-id")
     serializer_class = StudentSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Students can only see their own profile"""
+        if self.request.user.role == 'student':
+            return StudentProfile.objects.filter(user=self.request.user)
+        return StudentProfile.objects.all().order_by("-id")
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -226,14 +265,298 @@ class StudentViewSet(viewsets.ModelViewSet):
             "users": imported_users,
         })
 
+    @action(detail=True, methods=["get"])
+    def academic_record(self, request, pk=None):
+        """
+        Fetch academic records (Grades, Attendance) for a specific student.
+        """
+        student_profile = self.get_object()
+        user = student_profile.user
+        
+        grades = Grade.objects.filter(student=user).select_related('subject', 'semester').order_by('-date_recorded')
+        attendance = Attendance.objects.filter(student=user).select_related('subject').order_by('-date')
+
+        return Response({
+            "student": f"{user.first_name} {user.last_name}",
+            "grades": GradeSerializer(grades, many=True).data,
+            "attendance": AttendanceSerializer(attendance, many=True).data,
+            "extra_activities": student_profile.extra_activities,
+            "remarks": student_profile.remarks
+        })
+
+
+# Student Self-Service ViewSet
+class StudentSelfViewSet(viewsets.ReadOnlyModelViewSet):
+    """Students can only view their own data"""
+    serializer_class = StudentSerializer
+    permission_classes = [IsAuthenticated, IsStudentOwner]
+    
+    def get_queryset(self):
+        if self.request.user.role == 'student':
+            return StudentProfile.objects.filter(user=self.request.user)
+        return StudentProfile.objects.none()
+    
+    @action(detail=False, methods=['get'])
+    def my_profile(self, request):
+        """Get current student's complete profile"""
+        try:
+            profile = StudentProfile.objects.get(user=request.user)
+            serializer = StudentSerializer(profile)
+            return Response(serializer.data)
+        except StudentProfile.DoesNotExist:
+            return Response({"error": "Student profile not found"}, status=404)
+    
+    @action(detail=False, methods=['get'])
+    def my_grades(self, request):
+        """Get current student's grades with filtering - OPTIMIZED"""
+        semester = request.query_params.get('semester')
+        subject = request.query_params.get('subject')
+        academic_year = request.query_params.get('academic_year')
+        
+        # Use select_related to reduce database queries
+        grades = Grade.objects.filter(student=request.user).select_related('subject', 'semester')
+        
+        if semester:
+            grades = grades.filter(semester_id=semester)
+        if subject:
+            grades = grades.filter(subject_id=subject)
+        if academic_year:
+            grades = grades.filter(academic_year=academic_year)
+            
+        grades = grades.order_by('-date_recorded')[:50]  # Limit to 50 most recent
+        
+        # Calculate statistics efficiently
+        total_grades = grades.count()
+        avg_score = grades.aggregate(avg=models.Avg('score'))['avg'] or 0
+        
+        return Response({
+            "grades": GradeSerializer(grades, many=True).data,
+            "statistics": {
+                "total_grades": total_grades,
+                "average_score": round(avg_score, 2),
+                "subjects_count": grades.values('subject').distinct().count()
+            }
+        })
+    
+    @action(detail=False, methods=['get'])
+    def my_attendance(self, request):
+        """Get current student's attendance with statistics - OPTIMIZED"""
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        subject = request.query_params.get('subject')
+        
+        # Use select_related and limit results
+        attendance = Attendance.objects.filter(student=request.user).select_related('subject')
+        
+        if date_from:
+            attendance = attendance.filter(date__gte=date_from)
+        if date_to:
+            attendance = attendance.filter(date__lte=date_to)
+        if subject:
+            attendance = attendance.filter(subject_id=subject)
+            
+        attendance = attendance.order_by('-date')[:100]  # Limit to 100 most recent
+        
+        # Calculate statistics efficiently using aggregation
+        stats = attendance.aggregate(
+            total_days=models.Count('id'),
+            present_days=models.Count('id', filter=models.Q(status='present')),
+            absent_days=models.Count('id', filter=models.Q(status='absent'))
+        )
+        
+        attendance_percentage = (stats['present_days'] / stats['total_days'] * 100) if stats['total_days'] > 0 else 0
+        
+        return Response({
+            "attendance": AttendanceSerializer(attendance, many=True).data,
+            "statistics": {
+                "total_days": stats['total_days'],
+                "present_days": stats['present_days'],
+                "absent_days": stats['absent_days'],
+                "attendance_percentage": round(attendance_percentage, 2)
+            }
+        })
+    
+    @action(detail=False, methods=['get'])
+    def my_subjects(self, request):
+        """Get subjects for current student - OPTIMIZED"""
+        try:
+            profile = StudentProfile.objects.get(user=request.user)
+            
+            # Get subjects efficiently with aggregated data
+            subjects_data = Subject.objects.filter(
+                grade__student=request.user
+            ).annotate(
+                average_score=models.Avg('grade__score'),
+                total_grades=models.Count('grade')
+            ).distinct()
+            
+            subjects_list = []
+            for subject in subjects_data:
+                subjects_list.append({
+                    "id": subject.id,
+                    "name": subject.name,
+                    "code": subject.code,
+                    "credit_hours": subject.credit_hours,
+                    "average_score": round(subject.average_score or 0, 2),
+                    "total_grades": subject.total_grades
+                })
+            
+            return Response(subjects_list)
+        except StudentProfile.DoesNotExist:
+            return Response({"error": "Student profile not found"}, status=404)
+    
+    @action(detail=False, methods=['get'])
+    def my_library_records(self, request):
+        """Get current student's library borrowing records"""
+        records = BorrowRecord.objects.filter(
+            borrower_student=request.user,
+            borrower_type='student'
+        ).order_by('-borrow_date')
+        
+        records_data = []
+        for record in records:
+            records_data.append({
+                "id": record.id,
+                "book_title": record.book.title,
+                "book_author": record.book.author,
+                "book_isbn": record.book.isbn,
+                "borrow_date": record.borrow_date,
+                "expected_return_date": record.expected_return_date,
+                "actual_return_date": record.actual_return_date,
+                "returned": record.returned,
+                "overdue": record.expected_return_date < datetime.now().date() and not record.returned
+            })
+        
+        return Response(records_data)
+    
+    @action(detail=False, methods=['get'])
+    def academic_summary(self, request):
+        """Get comprehensive academic summary - OPTIMIZED"""
+        try:
+            profile = StudentProfile.objects.select_related('user').get(user=request.user)
+            
+            # Get aggregated data efficiently
+            grade_stats = Grade.objects.filter(student=request.user).aggregate(
+                total_grades=models.Count('id'),
+                avg_score=models.Avg('score'),
+                subjects_count=models.Count('subject', distinct=True)
+            )
+            
+            attendance_stats = Attendance.objects.filter(student=request.user).aggregate(
+                total_days=models.Count('id'),
+                present_days=models.Count('id', filter=models.Q(status='present'))
+            )
+            
+            attendance_percentage = (attendance_stats['present_days'] / attendance_stats['total_days'] * 100) if attendance_stats['total_days'] > 0 else 0
+            
+            # Get top 5 subject performances efficiently
+            subjects_performance = Subject.objects.filter(
+                grade__student=request.user
+            ).annotate(
+                average_score=models.Avg('grade__score'),
+                total_assessments=models.Count('grade')
+            ).distinct().order_by('-average_score')[:5]
+            
+            subjects_list = []
+            for subject in subjects_performance:
+                subjects_list.append({
+                    "subject_name": subject.name,
+                    "subject_code": subject.code,
+                    "average_score": round(subject.average_score or 0, 2),
+                    "total_assessments": subject.total_assessments
+                })
+            
+            return Response({
+                "student_info": {
+                    "name": f"{profile.user.first_name} {profile.user.last_name}",
+                    "admission_no": profile.admission_no,
+                    "student_id": profile.student_id,
+                    "class_section": profile.class_section,
+                    "department": profile.department,
+                    "academic_status": profile.academic_status
+                },
+                "academic_performance": {
+                    "overall_average": round(grade_stats['avg_score'] or 0, 2),
+                    "total_assessments": grade_stats['total_grades'] or 0,
+                    "subjects_count": grade_stats['subjects_count'] or 0,
+                    "subjects_performance": subjects_list
+                },
+                "attendance_summary": {
+                    "attendance_percentage": round(attendance_percentage, 2),
+                    "total_days": attendance_stats['total_days'] or 0,
+                    "present_days": attendance_stats['present_days'] or 0,
+                    "absent_days": (attendance_stats['total_days'] or 0) - (attendance_stats['present_days'] or 0)
+                }
+            })
+        except StudentProfile.DoesNotExist:
+            return Response({"error": "Student profile not found"}, status=404)
+    
+    @action(detail=False, methods=['get'])
+    def announcements(self, request):
+        """Get announcements for students"""
+        try:
+            # Get announcements for students or all
+            announcements = Announcement.objects.filter(
+                is_active=True,
+                target_audience__in=['all', 'students']
+            ).order_by('-created_at')
+            
+            # Get read status for current user
+            read_announcements = AnnouncementRead.objects.filter(
+                user=request.user
+            ).values_list('announcement_id', flat=True)
+            
+            announcement_data = []
+            for announcement in announcements:
+                announcement_data.append({
+                    'id': announcement.id,
+                    'title': announcement.title,
+                    'content': announcement.content,
+                    'type': announcement.type,
+                    'priority': announcement.priority,
+                    'date': announcement.created_at.strftime('%Y-%m-%d'),
+                    'author': announcement.author.get_full_name() or announcement.author.username,
+                    'read': announcement.id in read_announcements
+                })
+            
+            return Response(announcement_data)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Error fetching announcements: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'], url_path='announcements/(?P<announcement_id>[^/.]+)/read')
+    def mark_announcement_read(self, request, announcement_id=None):
+        """Mark an announcement as read"""
+        try:
+            announcement = Announcement.objects.get(id=announcement_id)
+            
+            # Create or get the read record
+            read_record, created = AnnouncementRead.objects.get_or_create(
+                announcement=announcement,
+                user=request.user
+            )
+            
+            return Response(
+                {'message': 'Announcement marked as read', 'created': created}
+            )
+            
+        except Announcement.DoesNotExist:
+            return Response(
+                {'error': 'Announcement not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error marking announcement as read: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 # -----------------------------
 # STAFF CRUD
 # -----------------------------
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from django.db import transaction
-from .models import StaffProfile, User
-from .serializers import StaffSerializer
 
 ROLE_CHOICES = [
     ('vice_director', 'Vice Director'),
@@ -256,7 +579,7 @@ class StaffViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Only show staff with roles in ROLE_CHOICES
         allowed_roles = [role[0] for role in ROLE_CHOICES]
-        return StaffProfile.objects.filter(user__role__in=allowed_roles).order_by("-id")
+        return StaffProfile.objects.filter(user__role__in=allowed_roles).select_related('user').order_by("-id")
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -342,7 +665,7 @@ class WeredaViewSet(viewsets.ModelViewSet):
 
 
 class WeredaManagerViewSet(viewsets.ModelViewSet):
-    queryset = StaffProfile.objects.filter(user__role="wereda_office").order_by("-id")
+    queryset = StaffProfile.objects.filter(user__role="wereda_office").select_related('user').order_by("-id")
     serializer_class = WeredaManagerSerializer
 
     def create(self, request, *args, **kwargs):
@@ -404,3 +727,413 @@ class SupervisorRegistrationViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(self.get_serializer(user).data, status=status.HTTP_200_OK)
+
+# Student Announcements API
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def student_announcements(request):
+    """Get announcements for students"""
+    try:
+        # Get announcements for students or all
+        announcements = Announcement.objects.filter(
+            is_active=True,
+            target_audience__in=['all', 'students']
+        ).order_by('-created_at')
+        
+        # Get read status for current user
+        read_announcements = AnnouncementRead.objects.filter(
+            user=request.user
+        ).values_list('announcement_id', flat=True)
+        
+        announcement_data = []
+        for announcement in announcements:
+            announcement_data.append({
+                'id': announcement.id,
+                'title': announcement.title,
+                'content': announcement.content,
+                'type': announcement.type,
+                'priority': announcement.priority,
+                'date': announcement.created_at.strftime('%Y-%m-%d'),
+                'author': announcement.author.get_full_name() or announcement.author.username,
+                'read': announcement.id in read_announcements
+            })
+        
+        return Response(announcement_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Error fetching announcements: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_announcement_read(request, announcement_id):
+    """Mark an announcement as read"""
+    try:
+        announcement = Announcement.objects.get(id=announcement_id)
+        
+        # Create or get the read record
+        read_record, created = AnnouncementRead.objects.get_or_create(
+            announcement=announcement,
+            user=request.user
+        )
+        
+        return Response(
+            {'message': 'Announcement marked as read', 'created': created}, 
+            status=status.HTTP_200_OK
+        )
+        
+    except Announcement.DoesNotExist:
+        return Response(
+            {'error': 'Announcement not found'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Error marking announcement as read: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# -----------------------------
+# TEACHER CRUD & SELF-SERVICE
+# -----------------------------
+class TeacherViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Teacher management.
+    Supports list, retrieve, create, update, delete.
+    """
+    queryset = Teacher.objects.all().order_by("-id")
+    serializer_class = TeacherSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        required_fields = ["department", "academic_rank", "first_name", "last_name", "national_id"]
+        for field in required_fields:
+            if not data.get(field):
+                return Response({"error": f"{field} is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        teacher = serializer.save()
+        
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class TeacherSelfViewSet(viewsets.ReadOnlyModelViewSet):
+    """Teachers can view their own data and manage their classes"""
+    serializer_class = TeacherSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        if self.request.user.role == 'teacher':
+            return Teacher.objects.filter(user=self.request.user)
+        return Teacher.objects.none()
+    
+    @action(detail=False, methods=['get'])
+    def my_profile(self, request):
+        """Get current teacher's complete profile"""
+        try:
+            teacher = Teacher.objects.get(user=request.user)
+            serializer = TeacherSerializer(teacher)
+            return Response(serializer.data)
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=404)
+    
+    @action(detail=False, methods=['get'])
+    def my_subjects(self, request):
+        """Get subjects taught by current teacher"""
+        try:
+            teacher = Teacher.objects.get(user=request.user)
+            subjects = teacher.subjects.all()
+            
+            subjects_data = []
+            for subject in subjects:
+                # Get sections for this subject
+                sections = Section.objects.filter(
+                    schedule__subject=subject,
+                    schedule__teacher=request.user
+                ).distinct()
+                
+                subjects_data.append({
+                    "id": subject.id,
+                    "name": subject.name,
+                    "code": subject.code,
+                    "credit_hours": subject.credit_hours,
+                    "department": subject.department,
+                    "sections": [
+                        {
+                            "id": section.id,
+                            "name": f"{section.class_group.name} - Section {section.name}",
+                            "class_group": section.class_group.name
+                        } for section in sections
+                    ]
+                })
+            
+            return Response(subjects_data)
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=404)
+    
+    @action(detail=False, methods=['get'])
+    def my_classes(self, request):
+        """Get classes/sections taught by current teacher"""
+        try:
+            teacher = Teacher.objects.get(user=request.user)
+            
+            # Get schedules for this teacher
+            schedules = Schedule.objects.filter(teacher=request.user).select_related(
+                'section', 'subject', 'room'
+            )
+            
+            classes_data = []
+            for schedule in schedules:
+                # Get student count for this section
+                student_count = User.objects.filter(
+                    role='student',
+                    studentprofile__class_section__icontains=schedule.section.class_group.name
+                ).count()
+                
+                classes_data.append({
+                    "id": schedule.id,
+                    "section": f"{schedule.section.class_group.name} - Section {schedule.section.name}",
+                    "subject": schedule.subject.name,
+                    "subject_code": schedule.subject.code,
+                    "room": schedule.room.name if schedule.room else "TBA",
+                    "day_of_week": schedule.day_of_week,
+                    "start_time": schedule.start_time.strftime('%H:%M'),
+                    "end_time": schedule.end_time.strftime('%H:%M'),
+                    "student_count": student_count
+                })
+            
+            return Response(classes_data)
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=404)
+    
+    @action(detail=False, methods=['get', 'post'])
+    def grades(self, request):
+        """Get or create grades for teacher's students"""
+        try:
+            teacher = Teacher.objects.get(user=request.user)
+            
+            if request.method == 'GET':
+                # Get filters
+                subject_id = request.query_params.get('subject')
+                section_id = request.query_params.get('section')
+                grade_type = request.query_params.get('grade_type')
+                
+                # Get grades for teacher's subjects
+                grades = Grade.objects.filter(
+                    teacher=teacher,
+                    subject__in=teacher.subjects.all()
+                ).select_related('student', 'subject', 'section')
+                
+                if subject_id:
+                    grades = grades.filter(subject_id=subject_id)
+                if section_id:
+                    grades = grades.filter(section_id=section_id)
+                if grade_type:
+                    grades = grades.filter(grade_type=grade_type)
+                
+                grades = grades.order_by('-date_recorded')[:100]
+                
+                serializer = TeacherGradeSerializer(grades, many=True)
+                return Response(serializer.data)
+            
+            elif request.method == 'POST':
+                # Create new grade
+                serializer = TeacherGradeSerializer(
+                    data=request.data, 
+                    context={'request': request}
+                )
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=404)
+    
+    @action(detail=False, methods=['get', 'post'])
+    def attendance(self, request):
+        """Get or record attendance for teacher's students"""
+        try:
+            teacher = Teacher.objects.get(user=request.user)
+            
+            if request.method == 'GET':
+                # Get filters
+                subject_id = request.query_params.get('subject')
+                section_id = request.query_params.get('section')
+                date = request.query_params.get('date')
+                
+                # Get attendance records for teacher's subjects
+                attendance = Attendance.objects.filter(
+                    taken_by=teacher,
+                    subject__in=teacher.subjects.all()
+                ).select_related('student', 'subject', 'section')
+                
+                if subject_id:
+                    attendance = attendance.filter(subject_id=subject_id)
+                if section_id:
+                    attendance = attendance.filter(section_id=section_id)
+                if date:
+                    attendance = attendance.filter(date=date)
+                
+                attendance = attendance.order_by('-date')[:100]
+                
+                serializer = TeacherAttendanceSerializer(attendance, many=True)
+                return Response(serializer.data)
+            
+            elif request.method == 'POST':
+                # Record attendance
+                serializer = TeacherAttendanceSerializer(
+                    data=request.data, 
+                    context={'request': request}
+                )
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=404)
+    
+    @action(detail=False, methods=['get'])
+    def my_students(self, request):
+        """Get students in teacher's classes"""
+        try:
+            teacher = Teacher.objects.get(user=request.user)
+            
+            # Get sections taught by this teacher
+            sections = Section.objects.filter(
+                schedule__teacher=request.user
+            ).distinct()
+            
+            students_data = []
+            for section in sections:
+                # Get students in this section
+                students = User.objects.filter(
+                    role='student',
+                    studentprofile__class_section__icontains=section.class_group.name
+                ).select_related('studentprofile')
+                
+                for student in students:
+                    # Get recent grades for this student in teacher's subjects
+                    recent_grades = Grade.objects.filter(
+                        student=student,
+                        teacher=teacher,
+                        subject__in=teacher.subjects.all()
+                    ).order_by('-date_recorded')[:3]
+                    
+                    # Get attendance percentage
+                    total_attendance = Attendance.objects.filter(
+                        student=student,
+                        taken_by=teacher
+                    ).count()
+                    present_attendance = Attendance.objects.filter(
+                        student=student,
+                        taken_by=teacher,
+                        status='present'
+                    ).count()
+                    
+                    attendance_percentage = (present_attendance / total_attendance * 100) if total_attendance > 0 else 0
+                    
+                    students_data.append({
+                        "id": student.id,
+                        "name": student.get_full_name(),
+                        "student_id": student.studentprofile.student_id,
+                        "class_section": student.studentprofile.class_section,
+                        "email": student.email,
+                        "recent_grades": [
+                            {
+                                "subject": grade.subject.name,
+                                "score": grade.score,
+                                "full_mark": grade.full_mark,
+                                "grade_type": grade.grade_type,
+                                "date": grade.date_recorded.strftime('%Y-%m-%d')
+                            } for grade in recent_grades
+                        ],
+                        "attendance_percentage": round(attendance_percentage, 1)
+                    })
+            
+            return Response(students_data)
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=404)
+    
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """Get dashboard statistics for teacher"""
+        try:
+            teacher = Teacher.objects.get(user=request.user)
+            
+            # Get basic counts
+            total_subjects = teacher.subjects.count()
+            total_classes = Schedule.objects.filter(teacher=request.user).count()
+            
+            # Get total students across all classes
+            sections = Section.objects.filter(
+                schedule__teacher=request.user
+            ).distinct()
+            
+            total_students = 0
+            for section in sections:
+                students_count = User.objects.filter(
+                    role='student',
+                    studentprofile__class_section__icontains=section.class_group.name
+                ).count()
+                total_students += students_count
+            
+            # Get recent grades count
+            recent_grades = Grade.objects.filter(
+                teacher=teacher,
+                date_recorded__gte=datetime.now().date() - timedelta(days=30)
+            ).count()
+            
+            # Get attendance records count
+            recent_attendance = Attendance.objects.filter(
+                taken_by=teacher,
+                date__gte=datetime.now().date() - timedelta(days=30)
+            ).count()
+            
+            return Response({
+                "total_subjects": total_subjects,
+                "total_classes": total_classes,
+                "total_students": total_students,
+                "recent_grades": recent_grades,
+                "recent_attendance": recent_attendance,
+                "teacher_info": {
+                    "name": teacher.user.get_full_name(),
+                    "employee_id": teacher.employee_id,
+                    "department": teacher.department,
+                    "academic_rank": teacher.academic_rank
+                }
+            })
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=404)
+
+# -----------------------------
+# TEACHER CRUD & MANAGEMENT
+# -----------------------------
+class TeacherViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Teacher management.
+    Supports list, retrieve, create, update, delete.
+    """
+    queryset = Teacher.objects.all().order_by("-id")
+    serializer_class = TeacherSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        required_fields = ["department", "academic_rank", "first_name", "last_name", "national_id"]
+        for field in required_fields:
+            if not data.get(field):
+                return Response({"error": f"{field} is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        teacher = serializer.save()
+        
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

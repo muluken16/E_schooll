@@ -153,16 +153,14 @@ wereda_office: [
 ],
 
   teacher: [
-  { label: 'Dashboard', to: '/dashboard', icon: <FaTachometerAlt /> },
-  { label: 'My Classes', to: '/classes', icon: <FaChalkboardTeacher /> },
-  { label: 'Assignments', to: '/teacher/assignments', icon: <FaClipboardList /> },
-  { label: 'Student Exam', to: '/exam', icon: <FaFileAlt /> },
-  { label: 'Student Results', to: '/results', icon: <FaGraduationCap /> },
-  { label: 'Attendance', to: '/attendance', icon: <FaUserCheck /> },
-  { label: 'Virtual Class', to: '/virtual-class', icon: <FaVideo /> },
-  { label: 'Communication', to: '/communication', icon: <FaEnvelope /> },
-  { label: 'Reports', to: '/teacher/reports', icon: <FaChartBar /> },
-  { label: 'Resources', to: '/resources', icon: <FaBookOpen /> },
+  { label: 'Teacher Dashboard', to: '/teacher/dashboard', icon: <FaTachometerAlt /> },
+  { label: 'My Classes', to: '/teacher/classes', icon: <FaChalkboardTeacher /> },
+  { label: 'My Students', to: '/teacher/students', icon: <FaUsers /> },
+  { label: 'Grades Management', to: '/teacher/grades', icon: <FaGraduationCap /> },
+  { label: 'Attendance', to: '/teacher/attendance', icon: <FaUserCheck /> },
+  { label: 'My Schedule', to: '/teacher/schedule', icon: <FaClock /> },
+  { label: 'Reports & Analytics', to: '/teacher/reports', icon: <FaChartBar /> },
+  { label: 'My Profile', to: '/teacher/profile', icon: <FaUser /> },
 ],
 
   librarian: [
@@ -188,13 +186,13 @@ wereda_office: [
   ],
   student: [
   { label: 'My Dashboard', to: '/dashboard', icon: <FaTachometerAlt /> },
+  { label: 'My Profile', to: '/student/profile', icon: <FaUser /> },
+  { label: 'My Grades', to: '/student/grades', icon: <FaGraduationCap /> },
+  { label: 'My Attendance', to: '/student/attendance', icon: <FaUserCheck /> },
   { label: 'Courses', to: '/student/courses', icon: <FaBook /> },
   { label: 'Assignments', to: '/student/assignments', icon: <FaClipboardList /> },
-  { label: 'Exams & Results', to: '/student/exams-results', icon: <FaFileAlt /> },
-  { label: 'Attendance', to: '/student/attendance', icon: <FaUserCheck /> },
   { label: 'Library', to: '/student/library', icon: <FaBookOpen /> },
-  { label: 'Communication', to: '/student/communication', icon: <FaEnvelope /> },
-  { label: 'Reports & Certificates', to: '/student/reports', icon: <FaGraduationCap /> },
+  { label: 'Reports & Certificates', to: '/student/reports', icon: <FaFileAlt /> },
 ],
 
   inventorial: [

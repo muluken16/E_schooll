@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
 from django.db import transaction
-from .models import School, StaffProfile, StudentProfile, User, Wereda
+from .models import School, StaffProfile, StudentProfile, User, Wereda, Teacher, Subject, Grade, Attendance, Section, Schedule
 from django.contrib.auth.hashers import make_password
 
 User = get_user_model()
@@ -537,3 +537,164 @@ class SupervisorRegistrationSerializer(serializers.ModelSerializer):
             ],
             "created_at": instance.date_joined,
         }
+
+
+# ------------------------- TEACHER SERIALIZER -------------------------
+class TeacherSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    first_name = serializers.CharField(write_only=True, required=True)
+    last_name = serializers.CharField(write_only=True, required=True)
+    national_id = serializers.CharField(write_only=True, required=True)
+    email = serializers.EmailField(write_only=True, required=False, allow_blank=True)
+    subjects = serializers.PrimaryKeyRelatedField(
+        queryset=Subject.objects.all(), 
+        many=True, 
+        required=False
+    )
+    subject_names = serializers.SerializerMethodField(read_only=True)
+    password = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Teacher
+        fields = [
+            'id', 'user', 'employee_id', 'department', 'hire_date', 
+            'academic_rank', 'subjects', 'subject_names',
+            'first_name', 'last_name', 'national_id', 'email', 'password'
+        ]
+        extra_kwargs = {"user": {"read_only": True}}
+
+    def get_subject_names(self, obj):
+        return [subject.name for subject in obj.subjects.all()]
+
+    def create(self, validated_data):
+        first_name = validated_data.pop("first_name")
+        last_name = validated_data.pop("last_name")
+        email = validated_data.pop("email", "")
+        national_id = validated_data.pop("national_id")
+        subjects = validated_data.pop("subjects", [])
+
+        # Check if national_id already exists
+        if User.objects.filter(national_id=national_id).exists():
+            raise serializers.ValidationError({"national_id": "A user with this National ID already exists."})
+
+        # Generate employee_id
+        last_teacher = Teacher.objects.order_by("-id").first()
+        number = 1
+        if last_teacher and last_teacher.employee_id and last_teacher.employee_id[1:].isdigit():
+            number = int(last_teacher.employee_id[1:]) + 1
+        employee_id = f"T{str(number).zfill(4)}"
+
+        # Generate username: first_name + last 4 chars of national_id
+        nat_part = national_id[-4:]
+        base_username = f"{first_name.lower()}{nat_part}"
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+
+        with transaction.atomic():
+            # Create User
+            user = User.objects.create(
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                role='teacher',
+                national_id=national_id
+            )
+            raw_password = f"{last_name.capitalize()}#123"
+            user.set_password(raw_password)
+            user.save()
+
+            # Create Teacher profile
+            teacher = Teacher.objects.create(
+                user=user,
+                employee_id=employee_id,
+                **validated_data
+            )
+            
+            # Add subjects
+            if subjects:
+                teacher.subjects.set(subjects)
+
+            teacher.password = raw_password  # attach password for response
+
+        return teacher
+
+    def update(self, instance, validated_data):
+        user = instance.user
+        subjects = validated_data.pop("subjects", None)
+
+        # Update User fields
+        user.first_name = validated_data.get('first_name', user.first_name)
+        user.last_name = validated_data.get('last_name', user.last_name)
+        user.email = validated_data.get('email', user.email)
+        national_id = validated_data.get('national_id', user.national_id)
+        user.national_id = national_id
+
+        # Update username if name or national_id changed
+        nat_part = national_id[-4:]
+        base_username = f"{user.first_name.lower()}{nat_part}"
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exclude(pk=user.pk).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+        user.username = username
+        user.save()
+
+        # Update Teacher fields
+        for attr, value in validated_data.items():
+            if attr not in ['first_name', 'last_name', 'email', 'national_id']:
+                setattr(instance, attr, value)
+        
+        # Update subjects
+        if subjects is not None:
+            instance.subjects.set(subjects)
+            
+        instance.save()
+        return instance
+
+
+# ------------------------- GRADE SERIALIZER FOR TEACHERS -------------------------
+class TeacherGradeSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    subject_name = serializers.CharField(source='subject.name', read_only=True)
+    section_name = serializers.CharField(source='section.name', read_only=True)
+
+    class Meta:
+        model = Grade
+        fields = [
+            'id', 'student', 'student_name', 'subject', 'subject_name', 
+            'section', 'section_name', 'grade_type', 'score', 'full_mark',
+            'academic_year', 'date_recorded'
+        ]
+
+    def create(self, validated_data):
+        # Set the teacher from the request context
+        request = self.context.get('request')
+        if request and hasattr(request.user, 'teacher'):
+            validated_data['teacher'] = request.user.teacher
+        return super().create(validated_data)
+
+
+# ------------------------- ATTENDANCE SERIALIZER FOR TEACHERS -------------------------
+class TeacherAttendanceSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    subject_name = serializers.CharField(source='subject.name', read_only=True)
+    section_name = serializers.CharField(source='section.name', read_only=True)
+
+    class Meta:
+        model = Attendance
+        fields = [
+            'id', 'student', 'student_name', 'section', 'section_name',
+            'subject', 'subject_name', 'date', 'status'
+        ]
+
+    def create(self, validated_data):
+        # Set the teacher from the request context
+        request = self.context.get('request')
+        if request and hasattr(request.user, 'teacher'):
+            validated_data['taken_by'] = request.user.teacher
+        return super().create(validated_data)

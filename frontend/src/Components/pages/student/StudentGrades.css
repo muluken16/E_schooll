@@ -1,0 +1,469 @@
+.student-grades {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Inter', sans-serif;
+}
+
+.grades-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.grades-header h1 {
+  font-size: 2.5rem;
+  color: #1f2937;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.grades-header p {
+  color: #6b7280;
+  font-size: 1.1rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+}
+
+.stat-content h3 {
+  margin: 0 0 5px 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.filters-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.filters {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  padding: 10px 15px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  color: #374151;
+  min-width: 200px;
+  transition: border-color 0.2s ease;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.subjects-overview {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.subjects-overview h3 {
+  margin: 0 0 20px 0;
+  color: #1f2937;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.subject-card {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.subject-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.subject-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.subject-header h4 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.subject-code {
+  background: #e5e7eb;
+  color: #6b7280;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.subject-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.subject-average {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.average-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.average-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.grade-letter {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.subject-assessments {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* Semester GPA Section */
+.semester-gpa-section {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.semester-gpa-section h3 {
+  margin: 0 0 20px 0;
+  color: #1f2937;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.semester-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.semester-card {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.semester-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.semester-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.semester-header h4 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.semester-gpa {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.semester-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 15px;
+}
+
+.semester-progress {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.semester-progress .progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.grades-table-section {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.download-btn:hover {
+  transform: translateY(-1px);
+}
+
+.grades-table-container {
+  overflow-x: auto;
+}
+
+.grades-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.grades-table th {
+  background: #f8fafc;
+  color: #374151;
+  font-weight: 600;
+  padding: 15px 12px;
+  text-align: left;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.grades-table td {
+  padding: 15px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+}
+
+.grades-table tr:hover {
+  background: #f8fafc;
+}
+
+.subject-cell .subject-name {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.assessment-type {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.assessment-type.assignment {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.assessment-type.quiz {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.assessment-type.midterm {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.assessment-type.final {
+  background: #fecaca;
+  color: #dc2626;
+}
+
+.assessment-type.project {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.score-cell, .full-mark-cell {
+  font-weight: 600;
+  text-align: center;
+}
+
+.percentage-cell {
+  text-align: center;
+}
+
+.percentage-value {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.grade-badge {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: inline-block;
+  min-width: 40px;
+  text-align: center;
+}
+
+.no-data {
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+  padding: 40px;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 50px;
+  font-size: 1.2rem;
+  color: #6b7280;
+}
+
+.error {
+  color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .student-grades {
+    padding: 15px;
+  }
+  
+  .grades-header h1 {
+    font-size: 2rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filters {
+    flex-direction: column;
+  }
+  
+  .filter-select {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .subjects-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .grades-table {
+    font-size: 0.9rem;
+  }
+  
+  .grades-table th,
+  .grades-table td {
+    padding: 10px 8px;
+  }
+}
